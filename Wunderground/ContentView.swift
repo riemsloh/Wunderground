@@ -1,5 +1,7 @@
 import SwiftUI
 import CoreLocation // Für CLLocationDirection
+import MapKit
+
 struct ContentView: View {
        @StateObject var pwsViewModel = PWSViewModel()
 
@@ -19,6 +21,7 @@ struct ContentView: View {
                             LuftdruckCard(title: "Luftdruck", value: metricData.pressure.map { String(format: "%.0f", $0) } ?? "N/A", iconName: "barometer")
                             RegenHeuteCard(title: "Regen heute", value: metricData.precipTotal.map { String(format: "%.1f", $0) } ?? "N/A", iconName: "umbrella")
                             KompassCard(title: "Wind", value: metricData.windSpeed.map {String(format: "%.0f", $0)} ?? "N/A", iconName: "wind")
+                            MapCard(locationName: "Riemsloh", latitude: 52.1833, longitude: 8.4167)
                         }
                         .padding(.horizontal)
                     }
@@ -293,4 +296,59 @@ func getCardinalDirection(for heading: CLLocationDirection) -> String {
     let safeIndex = (index % directions.count + directions.count) % directions.count
     
     return directions[safeIndex]
+}
+
+struct MapCard: View {
+    // Dies muss ein @State sein, da die Karte die Region ändern kann (z.B. durch Zoomen/Schwenken des Benutzers).
+        @State private var region: MKCoordinateRegion
+        // Optional: Ein Marker für den Standort
+        let locationName: String
+        let coordinate: CLLocationCoordinate2D
+        init(locationName: String, latitude: Double, longitude: Double) {
+            self.locationName = locationName
+            self.coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+            // Initialisiere die Region mit dem übergebenen Standort
+            _region = State(initialValue: MKCoordinateRegion(
+                center: coordinate,
+                span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1) // Zoom-Level (kleinere Werte = stärkerer Zoom)
+            ))
+        }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: "umbrella.fill")
+                    .foregroundColor(.white.opacity(0.7))
+                Text("Niederschlag")
+                    .font(.footnote)
+                    .foregroundColor(.white)
+                Spacer()
+            }
+           // Spacer()
+            HStack(alignment: .center){
+                Spacer()
+                Map(coordinateRegion: $region, annotationItems: [IdentifiableLocation(id: UUID(), name: locationName, coordinate: coordinate)]) { location in
+                    // Optionale Annotation (Marker oder benutzerdefinierte Ansicht)
+                    MapMarker(coordinate: location.coordinate, tint: .red) // Ein einfacher roter Marker
+                }
+                .edgesIgnoringSafeArea(.all) // Karte über den gesamten Bildschirmbereich ausdehnen (optional)
+                .frame(width: 180, height: 250.0)
+        //        Spacer()
+            }
+            Spacer()
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(width: 200, height: 300) // Feste Höhe für ein konsistentes Raster
+        .background(Color.white.opacity(0.1))
+        .cornerRadius(15)
+        .overlay(
+            RoundedRectangle(cornerRadius: 15)
+                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+        )
+    }
+}
+struct IdentifiableLocation: Identifiable {
+    let id: UUID // Eine eindeutige ID
+    let name: String
+    let coordinate: CLLocationCoordinate2D // Die Koordinaten des Standorts
 }
