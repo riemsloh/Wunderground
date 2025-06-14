@@ -13,5 +13,8 @@ struct WundergroundApp: App {
         WindowGroup {
             ContentView()
         }
+        Settings {
+            SettingsView()
+        }
     }
 }

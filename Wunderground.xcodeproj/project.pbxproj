@@ -11,6 +11,9 @@
 		ED8A5F8C2DFD6DAC00ABB713 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED8A5F8B2DFD6DAC00ABB713 /* ContentView.swift */; };
 		ED8A5F8E2DFD6DB100ABB713 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = ED8A5F8D2DFD6DB100ABB713 /* Assets.xcassets */; };
 		ED8A5F912DFD6DB100ABB713 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = ED8A5F902DFD6DB100ABB713 /* Preview Assets.xcassets */; };
+		ED8A5F9A2DFD8EDE00ABB713 /* PWSViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED8A5F982DFD8EDD00ABB713 /* PWSViewModel.swift */; };
+		ED8A5F9B2DFD8EDE00ABB713 /* PWSModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED8A5F992DFD8EDD00ABB713 /* PWSModels.swift */; };
+		ED8A5F9D2DFD90BF00ABB713 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED8A5F9C2DFD90BF00ABB713 /* SettingsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -20,6 +23,9 @@
 		ED8A5F8D2DFD6DB100ABB713 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		ED8A5F902DFD6DB100ABB713 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		ED8A5F922DFD6DB100ABB713 /* Wunderground.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Wunderground.entitlements; sourceTree = "<group>"; };
+		ED8A5F982DFD8EDD00ABB713 /* PWSViewModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PWSViewModel.swift; sourceTree = "<group>"; };
+		ED8A5F992DFD8EDD00ABB713 /* PWSModels.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PWSModels.swift; sourceTree = "<group>"; };
+		ED8A5F9C2DFD90BF00ABB713 /* SettingsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -52,6 +58,9 @@
 		ED8A5F882DFD6DAC00ABB713 /* Wunderground */ = {
 			isa = PBXGroup;
 			children = (
+				ED8A5F9C2DFD90BF00ABB713 /* SettingsView.swift */,
+				ED8A5F992DFD8EDD00ABB713 /* PWSModels.swift */,
+				ED8A5F982DFD8EDD00ABB713 /* PWSViewModel.swift */,
 				ED8A5F892DFD6DAC00ABB713 /* WundergroundApp.swift */,
 				ED8A5F8B2DFD6DAC00ABB713 /* ContentView.swift */,
 				ED8A5F8D2DFD6DB100ABB713 /* Assets.xcassets */,
@@ -139,7 +148,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				ED8A5F9D2DFD90BF00ABB713 /* SettingsView.swift in Sources */,
+				ED8A5F9B2DFD8EDE00ABB713 /* PWSModels.swift in Sources */,
 				ED8A5F8C2DFD6DAC00ABB713 /* ContentView.swift in Sources */,
+				ED8A5F9A2DFD8EDE00ABB713 /* PWSViewModel.swift in Sources */,
 				ED8A5F8A2DFD6DAC00ABB713 /* WundergroundApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
