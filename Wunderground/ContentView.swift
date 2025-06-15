@@ -2,6 +2,10 @@ import SwiftUI
 import CoreLocation // Für CLLocationDirection
 import MapKit
 
+
+// MARK: -
+// Kleine Kachel 150*150
+// Grße Kachel 300*150 + padding
 struct ContentView: View {
        @StateObject var pwsViewModel = PWSViewModel()
 
@@ -15,17 +19,35 @@ struct ContentView: View {
                 ScrollView { // Verwenden Sie ScrollView, wenn der Inhalt die Bildschirmhöhe überschreiten könnte
                     VStack(alignment: .leading, spacing: 20) {
                         PWSInfoCard(pwsViewModel: pwsViewModel)
-                        .padding([.top, .leading, .trailing])
-                        HStack{
-                            TemperaturCard(title: "Temperatur", value: metricData.temp.map { String(format: "%.0f", $0) } ?? "N/A", iconName: "thermometer.sun.circle")
-                            LuftdruckCard(title: "Luftdruck", value: metricData.pressure.map { String(format: "%.0f", $0) } ?? "N/A", iconName: "barometer")
-                            RegenHeuteCard(title: "Regen heute", value: metricData.precipTotal.map { String(format: "%.1f", $0) } ?? "N/A", iconName: "umbrella")
-                            KompassCard(title: "Wind", value: metricData.windSpeed.map {String(format: "%.0f", $0)} ?? "N/A", iconName: "wind")
+                            .padding([.top, .leading, .trailing])
+                        // MARK: - NEU: Haupt-HStack für die Zwei-Spalten-Anordnung
+                        HStack(alignment: .top, spacing: 15){// Haupt-HStack für die Aufteilung in linke und rechte Spalte
+                            // Linke Spalte: Die Niederschlags-Karte
+                           
+                            VStack(spacing: 15){
+                                HStack(spacing: 15){
+                                    WindCard(title: "Wind", value: "15", iconName: "wind")
+                                    RegenHeuteCard(title: "Regen heute", value: metricData.precipTotal.map { String(format: "%.1f", $0) } ?? "N/A", iconName: "umbrella")
+                                    RegenGesternCard(title: "Regen heute", value: metricData.precipTotal.map { String(format: "%.1f", $0) } ?? "N/A", iconName: "umbrella")
+                                }
+                                HStack(spacing: 15){
+                                    TemperaturCard(title: "Temperatur", value: metricData.temp.map { String(format: "%.0f", $0) } ?? "N/A", iconName: "thermometer.sun.circle")
+                                    LuftdruckCard(title: "Luftdruck", value: metricData.pressure.map { String(format: "%.0f", $0) } ?? "N/A", iconName: "barometer")
+                                    RegenHeuteCard(title: "Regen heute", value: metricData.precipTotal.map { String(format: "%.1f", $0) } ?? "N/A", iconName: "umbrella")
+                                    KompassCard(title: "Wind", value: metricData.windSpeed.map {String(format: "%.0f", $0)} ?? "N/A", iconName: "wind")
+                                }
+                                
+                            }
+                            .frame(maxWidth: .infinity)
                             MapCard(locationName: "Riemsloh", latitude: 52.1833, longitude: 8.4167)
+                            
+                            
                         }
                         .padding(.horizontal)
+                        .padding(.bottom)
+                        
                     }
-                    .padding()
+                    .padding(.bottom)
                 }
             }
         }
@@ -103,6 +125,10 @@ struct PWSInfoCard: View {
     }
 }
 
+let smallCardWidth: CGFloat = 150
+let smallCardHeight: CGFloat = 150
+let bigCardWidth: CGFloat = 315
+let bigCardheight: CGFloat = 150
 // MARK: - Die Info Karte
 struct TemperaturCard: View {
     let title: String
@@ -223,7 +249,85 @@ struct RegenHeuteCard: View {
         )
     }
 }
+// MARK: - Regen gestern
+struct RegenGesternCard: View {
+    let title: String
+    let value: String
+    let iconName: String
 
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: iconName)
+                    .foregroundColor(.white.opacity(0.7))
+                Text(title)
+                    .font(.footnote)
+                    .foregroundColor(.white)
+                Spacer()
+            }
+            Spacer()
+            HStack(alignment: .center){
+                Spacer()
+                Text("\(value)l")
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2) // Erlaubt den Zeilenumbruch, falls nötig
+                Spacer()
+            }
+            Spacer()
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(width: 150, height: 150) // Feste Höhe für ein konsistentes Raster
+        .background(Color.white.opacity(0.1))
+        .cornerRadius(15)
+        .overlay(
+            RoundedRectangle(cornerRadius: 15)
+                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+        )
+    }
+}
+struct WindCard: View {
+    let title: String
+    let value: String
+    let iconName: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: iconName)
+                    .foregroundColor(.white.opacity(0.7))
+                Text(title)
+                    .font(.footnote)
+                    .foregroundColor(.white)
+                Spacer()
+            }
+            Spacer()
+            HStack(alignment: .center){
+                Spacer()
+                Text("\(value)l")
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2) // Erlaubt den Zeilenumbruch, falls nötig
+                Spacer()
+            }
+            Spacer()
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(width: bigCardWidth, height: bigCardheight) // Feste Höhe für ein konsistentes Raster
+        .background(Color.white.opacity(0.1))
+        .cornerRadius(15)
+        .overlay(
+            RoundedRectangle(cornerRadius: 15)
+                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+        )
+    }
+}
 struct KompassCard: View {
     let title: String
     let value: String
