@@ -420,9 +420,9 @@ struct MapCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Image(systemName: "umbrella.fill")
+                Image(systemName: "cloud.sun.rain.circle.fill")
                     .foregroundColor(.white.opacity(0.7))
-                Text("Niederschlag")
+                Text("Wetter Karte")
                     .font(.footnote)
                     .foregroundColor(.white)
                 Spacer()
