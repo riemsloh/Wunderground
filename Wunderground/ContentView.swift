@@ -26,9 +26,8 @@ struct ContentView: View {
                            
                             VStack(spacing: 15){
                                 HStack(spacing: 15){
-                                    WindCard(title: "Wind", value: "15", iconName: "wind")
-                                    RegenHeuteCard(title: "Regen heute", value: metricData.precipTotal.map { String(format: "%.1f", $0) } ?? "N/A", iconName: "umbrella")
-                                    RegenGesternCard(title: "Regen heute", value: metricData.precipTotal.map { String(format: "%.1f", $0) } ?? "N/A", iconName: "umbrella")
+                                    WindCard(windSpeed: metricData.windSpeed ?? Double(Int(0.0)), windGust: metricData.windGust ?? Double(Int(0.0)), windDirection: Double(obs.winddir ?? Int(0.0)))
+                                    NiederschlagsCard(rainToday: metricData.precipTotal ?? 0.0, rainYesterday: 0.0, rainWeek: 0.0)
                                 }
                                 HStack(spacing: 15){
                                     TemperaturCard(title: "Temperatur", value: metricData.temp.map { String(format: "%.0f", $0) } ?? "N/A", iconName: "thermometer.sun.circle")
@@ -289,22 +288,148 @@ struct RegenGesternCard: View {
         )
     }
 }
-struct WindCard: View {
-    let title: String
-    let value: String
-    let iconName: String
-
+struct NiederschlagsCard: View {
+    let rainToday: Double
+    let rainYesterday: Double
+    let rainWeek: Double
+    
     var body: some View {
+          
+          VStack(alignment: .leading, spacing: 10) {
+              HStack {
+                  Image(systemName: "umbrella")
+                      .foregroundColor(.white.opacity(0.7))
+                  Text("Niederschlag")
+                      .font(.footnote)
+                      .foregroundColor(.white)
+                  Spacer()
+              }
+              //Spacer()
+              HStack{
+                  VStack{
+                      HStack{
+                          Text("Heute")
+                          Spacer()
+                          Text(String(format: "%.0f liter", rainToday))
+                      }
+                      Divider()
+                      HStack{
+                          Text("Gestern")
+                          Spacer()
+                          Text(String(format: "%.0f liter", rainYesterday))
+                      }
+                      Divider()
+                      HStack{
+                          Text("Diese Woche")
+                          Spacer()
+                          Text(String(format: "%.0f liter ", rainWeek))
+                      }
+                  }
+                  Spacer()
+                  HStack{
+                      ZStack{
+                          Spacer()
+                          Circle()
+                              .stroke(Color.blue, lineWidth: 1)
+                              .frame(width: 60, height: 60, alignment: .center)
+                          Image(systemName: "arrow.up")
+                              .resizable()
+                              .aspectRatio(contentMode: .fit)
+                              .rotationEffect(.degrees(175))
+                              .frame(width: 40, height: 40, alignment: .center)
+                           //   .fontWeight(arrowWeight)
+                      }
+                      .frame(width: 100.0, height: 100.0)
+                  }
+              }
+              
+              Spacer()
+              /*
+               HStack(alignment: .center){
+               Spacer()
+               Text("\(value)l")
+               .font(.title)
+               .fontWeight(.bold)
+               .foregroundColor(.white)
+               .multilineTextAlignment(.center)
+               .lineLimit(2) // Erlaubt den Zeilenumbruch, falls nötig
+               Spacer()
+               }
+               Spacer()
+               */
+          }
+          .padding()
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .frame(width: bigCardWidth, height: bigCardheight) // Feste Höhe für ein konsistentes Raster
+          .background(Color.white.opacity(0.1))
+          .cornerRadius(15)
+          .overlay(
+            RoundedRectangle(cornerRadius: 15)
+                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+          )
+    }
+}
+
+struct WindCard: View {
+    let windSpeed: Double
+    let windGust: Double
+    let windDirection: Double
+    var arrowWeight: Font.Weight = .ultraLight // NEU: Gewicht des Pfeil-Fonts
+   
+    var body: some View {
+      //  let windDirektion1: CLLocationDirection = windDirection
+        let cardinalDirection = WeatherHelpers.getCardinalDirection(for: windDirection)
+        
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Image(systemName: iconName)
+                Image(systemName: "wind")
                     .foregroundColor(.white.opacity(0.7))
-                Text(title)
+                Text("Wind")
                     .font(.footnote)
                     .foregroundColor(.white)
                 Spacer()
             }
+            //Spacer()
+            HStack{
+                VStack{
+                    HStack{
+                        Text("Wind")
+                        Spacer()
+                        Text(String(format: "%.0f km/h", windSpeed))
+                    }
+                    Divider()
+                    HStack{
+                        Text("Windböen")
+                        Spacer()
+                        Text(String(format: "%.0f km/h", windGust))
+                    }
+                    Divider()
+                    HStack{
+                        Text("Windrichtung")
+                        Spacer()
+                        Text("\(String(format: "%.0f° ", windDirection)) ,\(cardinalDirection)")
+                    }
+                }
+                Spacer()
+                HStack{
+                    ZStack{
+                        Spacer()
+                        Circle()
+                            .stroke(Color.blue, lineWidth: 1)
+                            .frame(width: 60, height: 60, alignment: .center)
+                        Image(systemName: "arrow.up")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .rotationEffect(.degrees(175))
+                            .frame(width: 40, height: 40, alignment: .center)
+                            .fontWeight(arrowWeight)
+                    }
+                    .frame(width: 100.0, height: 100.0)
+                }
+            }
+            
             Spacer()
+            /*
             HStack(alignment: .center){
                 Spacer()
                 Text("\(value)l")
@@ -316,6 +441,7 @@ struct WindCard: View {
                 Spacer()
             }
             Spacer()
+             */
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -373,33 +499,53 @@ struct KompassCard: View {
 ///
 /// - Parameter heading: Die Himmelsrichtung in Grad (0-359.9, wobei 0 Grad Norden ist).
 /// - Returns: Der String der entsprechenden Himmelsrichtung.
-func getCardinalDirection(for heading: CLLocationDirection) -> String {
-    // Array mit den 16 Himmelsrichtungen im Uhrzeigersinn, beginnend mit Nord (N)
-    let directions = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
-                      "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
-    
-    // Die Breite jedes Richtungssegments in Grad (360 Grad / 16 Richtungen)
-    let segmentWidth = 360.0 / Double(directions.count) // 22.5 Grad pro Segment
-    
-    // Verschieben des Winkels, um sicherzustellen, dass die Mitte des "N"-Segments
-    // bei 0 Grad liegt. Normalerweise beginnt jedes Segment bei x und endet bei x + segmentWidth.
-    // Durch das Hinzufügen von der Hälfte der Segmentbreite (`segmentWidth / 2`) wird der Winkel
-    // so verschoben, dass 0 Grad genau in die Mitte des "N"-Segments fällt.
-    // Die 360-Grad-Modulo-Operation (`.truncatingRemainder(dividingBy: 360)`)
-    // stellt sicher, dass der Winkel im Bereich [0, 360) bleibt.
-    let shiftedHeading = (heading + segmentWidth / 2).truncatingRemainder(dividingBy: 360)
-    
-    // Berechne den Index im 'directions'-Array.
-    // Teilen durch die Segmentbreite ergibt, in welchem Segment der Winkel liegt.
-    // Int() schneidet Nachkommastellen ab, um den Array-Index zu erhalten.
-    let index = Int(shiftedHeading / segmentWidth)
-    
-    // Der resultierende Index sollte immer im gültigen Bereich des Arrays liegen.
-    // Aber zur Sicherheit nochmals modulo der Array-Größe anwenden, falls es zu Rundungsfehlern kommt
-    // oder wenn der `heading`-Wert außerhalb von 0-360 liegt.
-    let safeIndex = (index % directions.count + directions.count) % directions.count
-    
-    return directions[safeIndex]
+/*
+ // Beispiel innerhalb deiner KompassCard oder einer anderen View:
+ // Angenommen, du hast einen WindDirection-Wert, z.B. von metricData.winddir oder metricData.windDirection
+ let windDirection: CLLocationDirection = metricData?.winddir.map { Double($0) } ?? 0.0 // Oder metricData.windDirection ?? 0.0
+ let cardinalDirection = WeatherHelpers.getCardinalDirection(for: windDirection)
+
+ // Dann kannst du `cardinalDirection` in deiner Text-View anzeigen
+ Text(cardinalDirection)
+*/
+ // MARK: - Hilfsstruktur für Wetterfunktionen
+// Diese Struktur kann an einer geeigneten Stelle in deiner Datei (z.B. oben, oder in einer eigenen Helper-Datei) platziert werden.
+struct WeatherHelpers {
+
+    // Das Array der Himmelsrichtungen als statische Konstante
+    static let cardinalDirections: [String] = [
+        "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+        "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"
+    ]
+
+    // Funktion zur Ermittlung der Himmelsrichtung
+    // Sie sollte weiterhin in ContentView.swift, aber mit diesen Anpassungen, funktionieren
+    static func getCardinalDirection(for heading: CLLocationDirection) -> String {
+        // Sicherstellen, dass der übergebene Wert explizit als Double behandelt wird
+        let headingValue = Double(heading)
+
+        // Sicherstellen, dass der Winkel positiv ist und im Bereich [0, 360) liegt
+        let normalizedHeading = headingValue.truncatingRemainder(dividingBy: 360.0)
+
+        // Um 22.5 Grad verschieben für korrekte Segmentzuweisung (halbe Segmentbreite)
+        let shiftedHeading = (normalizedHeading + 22.5).truncatingRemainder(dividingBy: 360.0)
+
+        // Jeder Himmelsrichtung entspricht einem 22.5-Grad-Segment (360 / 16)
+        let segmentWidth = 360.0 / Double(cardinalDirections.count)
+
+        // Teilen durch die Segmentbreite ergibt, in welchem Segment der Winkel liegt.
+        // Explizite Konvertierung zu Double vor der Division und dann zu Int
+        let rawIndex = shiftedHeading / segmentWidth
+        let index = Int(rawIndex)
+
+        // Der resultierende Index sollte immer im gültigen Bereich des Arrays liegen.
+        // Eine Sicherheitsprüfung, falls doch ein unerwarteter Wert entsteht.
+        guard index >= 0 && index < cardinalDirections.count else {
+            return "N/A" // Oder eine geeignete Standardrichtung bei einem unerwarteten Index
+        }
+
+        return cardinalDirections[index]
+    }
 }
 
 struct MapCard: View {
