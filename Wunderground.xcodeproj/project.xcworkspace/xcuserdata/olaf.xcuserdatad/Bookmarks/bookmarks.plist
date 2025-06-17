@@ -9,16 +9,12 @@
 			<dict>
 				<key>location-parameters</key>
 				<dict>
-					<key>EndingColumnNumber</key>
-					<string>0</string>
 					<key>EndingLineNumber</key>
-					<string>9</string>
-					<key>StartingColumnNumber</key>
-					<string>0</string>
+					<string>767</string>
 					<key>StartingLineNumber</key>
-					<string>8</string>
+					<string>767</string>
 					<key>Timestamp</key>
-					<string>771707985.251861</string>
+					<string>771843386.551747</string>
 				</dict>
 				<key>rebasable-url</key>
 				<dict>
@@ -34,17 +30,13 @@
 			<key>text-context</key>
 			<dict>
 				<key>focused</key>
-				<string>struct ContentView: View {
-</string>
+				<string></string>
 				<key>leading</key>
-				<string>// Kleine Kachel 150*150
-// Grße Kachel 300*150 + padding
+				<string>    }
+}
 </string>
 				<key>trailing</key>
-				<string>       @StateObject var pwsViewModel = PWSViewModel()
-
-    var body: some View {
-</string>
+				<string></string>
 			</dict>
 			<key>title</key>
 			<string>ContentView</string>

@@ -1,29 +1,31 @@
 import SwiftUI
-import CoreLocation // Für CLLocationDirection
+import CoreLocation // For CLLocationDirection
 import MapKit
 
 
 // MARK: -
-// Kleine Kachel 150*150
-// Grße Kachel 300*150 + padding
+// Small tile 150*150
+// Large tile 300*150 + padding
 struct ContentView: View {
-       @StateObject var pwsViewModel = PWSViewModel()
+    @StateObject var pwsViewModel = PWSViewModel()
+    @State private var selectedHistoricalDate: Date = Date() // For selecting the historical date
 
     var body: some View {
         ZStack {
-            // MARK: - Hintergrund-Farbverlauf
+            // MARK: - Background gradient
             LinearGradient(gradient: Gradient(colors: [Color(red: 0.2, green: 0.1, blue: 0.4), Color(red: 0.4, green: 0.1, blue: 0.6)]), startPoint: .topLeading, endPoint: .bottomTrailing)
                 .edgesIgnoringSafeArea(.all)
-            // Überprüfen, ob Beobachtungsdaten und metrische Daten verfügbar sind.
-            if let obs = pwsViewModel.observation, let metricData = obs.metric {
-                ScrollView { // Verwenden Sie ScrollView, wenn der Inhalt die Bildschirmhöhe überschreiten könnte
-                    VStack(alignment: .leading, spacing: 20) {
-                        PWSInfoCard(pwsViewModel: pwsViewModel)
+            
+            ScrollView { // Use ScrollView if content might exceed screen height
+                VStack(alignment: .leading, spacing: 20) {
+                    
+                    // MARK: - Current weather data (PWSInfoCard and current weather cards)
+                    // NOTE: pwsViewModel is now passed directly to PWSInfoCard
+                    if let obs = pwsViewModel.observation, let metricData = obs.metric {
+                        PWSInfoCard(pwsViewModel: pwsViewModel) // --- Changed line
                             .padding([.top, .leading, .trailing])
-                        // MARK: - NEU: Haupt-HStack für die Zwei-Spalten-Anordnung
-                        HStack(alignment: .top, spacing: 15){// Haupt-HStack für die Aufteilung in linke und rechte Spalte
-                            // Linke Spalte: Die Niederschlags-Karte
-                           
+                        
+                        HStack(alignment: .top, spacing: 15){ // Main HStack for dividing into left and right columns
                             VStack(spacing: 15){
                                 HStack(spacing: 15){
                                     WindCard(windSpeed: metricData.windSpeed ?? Double(Int(0.0)), windGust: metricData.windGust ?? Double(Int(0.0)), windDirection: Double(obs.winddir ?? Int(0.0)))
@@ -35,40 +37,100 @@ struct ContentView: View {
                                     RegenHeuteCard(title: "Regen heute", value: metricData.precipTotal.map { String(format: "%.1f", $0) } ?? "N/A", iconName: "umbrella")
                                     KompassCard(title: "Wind", value: metricData.windSpeed.map {String(format: "%.0f", $0)} ?? "N/A", iconName: "wind")
                                 }
-                                
                             }
                             .frame(maxWidth: .infinity)
-                            MapCard(locationName: "Riemsloh", latitude: 52.1833, longitude: 8.4167)
-                            
-                            
+                            MapCard(locationName: obs.neighborhood ?? "N/A", latitude: obs.lat ?? 0.0, longitude: obs.lon ?? 0.0)
                         }
                         .padding(.horizontal)
                         .padding(.bottom)
-                        
+                    } else if pwsViewModel.isLoading {
+                        ProgressView("Loading current weather data...")
+                            .tint(.white)
+                            .padding()
+                    } else if let errorMessage = pwsViewModel.errorMessage {
+                        Text(errorMessage)
+                            .foregroundColor(.red)
+                            .padding()
                     }
-                    .padding(.bottom)
+                    
+                    // MARK: - Historical weather data
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Historical Weather Data")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .padding(.horizontal)
+                        
+                        // Date selection for historical data
+                        HStack {
+                            Text("Select Date:")
+                                .foregroundColor(.white.opacity(0.8))
+                            DatePicker("", selection: $selectedHistoricalDate, in: ...Date(), displayedComponents: .date)
+                                .datePickerStyle(.field)
+                                .labelsHidden() // Hide label as text is next to it
+                                .frame(width: 150) // Fixed width for DatePicker
+                                .onChange(of: selectedHistoricalDate) { newDate in
+                                    let formatter = DateFormatter()
+                                    formatter.dateFormat = "yyyyMMdd"
+                                    let dateString = formatter.string(from: newDate)
+                                    Task {
+                                        await pwsViewModel.fetchHistoricalWeatherData(date: dateString)
+                                    }
+                                }
+                        }
+                        .padding(.horizontal)
+                        
+                        if pwsViewModel.isLoading {
+                            ProgressView("Loading historical data...")
+                                .tint(.white)
+                                .padding()
+                        } else if !pwsViewModel.historicalObservations.isEmpty {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 15) {
+                                    ForEach(pwsViewModel.historicalObservations) { obs in
+                                        HistoricalDataCard(observation: obs)
+                                    }
+                                }
+                                .padding(.horizontal)
+                                .padding(.bottom)
+                            }
+                        } else {
+                            // Show specific error message if available, otherwise generic message
+                            if let error = pwsViewModel.errorMessage {
+                                Text("Error loading historical data: \(error)")
+                                    .foregroundColor(.red)
+                                    .font(.footnote)
+                                    .padding(.horizontal)
+                                    .padding(.bottom)
+                            } else {
+                                Text("No historical data available for the selected date or station ID/API key missing.")
+                                    .foregroundColor(.gray)
+                                    .font(.footnote)
+                                    .padding(.horizontal)
+                                    .padding(.bottom)
+                            }
+                        }
+                    }
                 }
+                .padding(.bottom)
             }
         }
-        // WICHTIG: Starte den Datenabruf und den Timer, sobald dieses View erscheint.
+        // IMPORTANT: Start data fetching and timer as soon as this View appears.
         .onAppear {
-            // stationId und apiKey Parameter entfernt, da ViewModel sie direkt aus AppStorage liest.
             pwsViewModel.startFetchingDataAutomatically()
-            // Daten für die stündliche Vorhersage beim Erscheinen der ContentView laden
-            // Nur laden, wenn noch keine Daten vorhanden sind und nicht bereits geladen wird
-          //  if hourlyViewModel.hourlyForecasts.isEmpty && !hourlyViewModel.isLoading {
-           //     Task {
-            //        await hourlyViewModel.fetchHourlyWeatherData()
-            //    }
-           // }
+            // Load historical data for today's date on first appearance
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyyMMdd"
+            let dateString = formatter.string(from: selectedHistoricalDate)
+            Task {
+                await pwsViewModel.fetchHistoricalWeatherData(date: dateString)
+            }
         }
         .onDisappear {
-            // Stoppe den Timer, wenn das Menüleisten-Pop-over geschlossen wird.
+            // Stop the timer when the menu bar popover is closed.
             pwsViewModel.stopFetchingDataAutomatically()
-            
         }
     }
- 
 }
 
 // MARK: - ContentView_Previews
@@ -78,21 +140,28 @@ struct ContentView_Previews: PreviewProvider {
     }
 }
 
+// MARK: - PWSInfoCard
 struct PWSInfoCard: View {
-    @ObservedObject var pwsViewModel = PWSViewModel()
+    @ObservedObject var pwsViewModel: PWSViewModel // --- Changed line: no initialization here anymore
+
+    // Explicit Initializer to fix Ambiguous Use error
+    init(pwsViewModel: PWSViewModel) {
+        self._pwsViewModel = ObservedObject(wrappedValue: pwsViewModel)
+    }
+
     var body: some View {
         let currentStatusColor: Color = pwsViewModel.isLoading ? Color.yellow : Color.green
-        let automaticLoading: String = pwsViewModel.autoRefreshEnabled ? "EIN" : "AUS"
+        let automaticLoading: String = pwsViewModel.autoRefreshEnabled ? "ON" : "OFF"
         let obs = pwsViewModel.observation
-        VStack(alignment: .leading, spacing: 10) { // Ein VStack, um die zwei Textzeilen zu gruppieren
+        VStack(alignment: .leading, spacing: 10) { // A VStack to group the two text lines
             HStack {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(currentStatusColor)
                     .font(.title2)
-                Text("Wetterstation")
+                Text("Weather Station")
                     .foregroundColor(.white)
                     .font(.headline)
-                Image(systemName: "lock.fill") // Platzhalter für Moonlock-Symbol
+                Image(systemName: "lock.fill") // Placeholder for Moonlock symbol
                     .foregroundColor(.white)
                 Text("\(obs?.neighborhood ?? "N/A")")
                     .foregroundColor(.white)
@@ -100,20 +169,20 @@ struct PWSInfoCard: View {
                 Spacer()
                 Image(systemName: "checkmark.shield.fill")
                     .foregroundColor(.green)
-                Text("Geschützt")
+                Text("Protected")
                     .foregroundColor(.white)
             }
-            .padding([.top, .horizontal]) // Padding nur oben und horizontal für diese HStack
+            .padding([.top, .horizontal]) // Padding only top and horizontal for this HStack
 
             VStack(alignment: .leading) {
-                Text("Echtzeit-Wetterüberwachung \(automaticLoading)")
+                Text("Real-time Weather Monitoring \(automaticLoading)")
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.8))
-                Text("Letztes update: \(obs?.formattedDayAndDate ?? "N/A")")
+                Text("Last update: \(obs?.formattedDayAndDate ?? "N/A")")
                     .font(.caption)
                     .foregroundColor(.gray)
             }
-            .padding([.bottom, .horizontal]) // Padding nur unten und horizontal für diese VStack
+            .padding([.bottom, .horizontal]) // Padding only bottom and horizontal for this VStack
         }
         .background(Color.white.opacity(0.1))
         .cornerRadius(15)
@@ -128,7 +197,7 @@ let smallCardWidth: CGFloat = 150
 let smallCardHeight: CGFloat = 150
 let bigCardWidth: CGFloat = 315
 let bigCardheight: CGFloat = 150
-// MARK: - Die Info Karte
+// MARK: - The Info Card
 struct TemperaturCard: View {
     let title: String
     let value: String
@@ -152,14 +221,14 @@ struct TemperaturCard: View {
                     .fontWeight(.bold)
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
-                    .lineLimit(2) // Erlaubt den Zeilenumbruch, falls nötig
+                    .lineLimit(2) // Allows line breaks if necessary
                 Spacer()
             }
             Spacer()
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(width: 150, height: 150) // Feste Höhe für ein konsistentes Raster
+        .frame(width: 150, height: 150) // Fixed height for a consistent grid
         .background(Color.white.opacity(0.1))
         .cornerRadius(15)
         .overlay(
@@ -168,7 +237,7 @@ struct TemperaturCard: View {
         )
     }
 }
-// MARK: - Die Luftfeuchtigkeits Karte
+// MARK: - The Humidity Card
 struct LuftdruckCard: View {
     let title: String
     let value: String
@@ -192,14 +261,14 @@ struct LuftdruckCard: View {
                     .fontWeight(.bold)
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
-                    .lineLimit(2) // Erlaubt den Zeilenumbruch, falls nötig
+                    .lineLimit(2) // Allows line breaks if necessary
                 Spacer()
             }
             Spacer()
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(width: 150, height: 150) // Feste Höhe für ein konsistentes Raster
+        .frame(width: 150, height: 150) // Fixed height for a consistent grid
         .background(Color.white.opacity(0.1))
         .cornerRadius(15)
         .overlay(
@@ -232,14 +301,14 @@ struct RegenHeuteCard: View {
                     .fontWeight(.bold)
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
-                    .lineLimit(2) // Erlaubt den Zeilenumbruch, falls nötig
+                    .lineLimit(2) // Allows line breaks if necessary
                 Spacer()
             }
             Spacer()
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(width: 150, height: 150) // Feste Höhe für ein konsistentes Raster
+        .frame(width: 150, height: 150) // Fixed height for a consistent grid
         .background(Color.white.opacity(0.1))
         .cornerRadius(15)
         .overlay(
@@ -248,7 +317,7 @@ struct RegenHeuteCard: View {
         )
     }
 }
-// MARK: - Regen gestern
+// MARK: - Rain yesterday
 struct RegenGesternCard: View {
     let title: String
     let value: String
@@ -272,14 +341,14 @@ struct RegenGesternCard: View {
                     .fontWeight(.bold)
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
-                    .lineLimit(2) // Erlaubt den Zeilenumbruch, falls nötig
+                    .lineLimit(2) // Allows line breaks if necessary
                 Spacer()
             }
             Spacer()
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(width: 150, height: 150) // Feste Höhe für ein konsistentes Raster
+        .frame(width: 150, height: 150) // Fixed height for a consistent grid
         .background(Color.white.opacity(0.1))
         .cornerRadius(15)
         .overlay(
@@ -299,7 +368,7 @@ struct NiederschlagsCard: View {
               HStack {
                   Image(systemName: "umbrella")
                       .foregroundColor(.white.opacity(0.7))
-                  Text("Niederschlag")
+                  Text("Precipitation")
                       .font(.footnote)
                       .foregroundColor(.white)
                   Spacer()
@@ -308,21 +377,21 @@ struct NiederschlagsCard: View {
               HStack{
                   VStack{
                       HStack{
-                          Text("Heute")
+                          Text("Today")
                           Spacer()
                           Text(String(format: "%.0f liter", rainToday))
                       }
                       Divider()
                       HStack{
-                          Text("Gestern")
+                          Text("Yesterday")
                           Spacer()
                           Text(String(format: "%.0f liter", rainYesterday))
                       }
                       Divider()
                       HStack{
-                          Text("Diese Woche")
+                          Text("This Week")
                           Spacer()
-                          Text(String(format: "%.0f liter ", rainWeek))
+                          Text(String(format: "%.0f liter", rainWeek))
                       }
                   }
                   Spacer()
@@ -352,7 +421,7 @@ struct NiederschlagsCard: View {
                .fontWeight(.bold)
                .foregroundColor(.white)
                .multilineTextAlignment(.center)
-               .lineLimit(2) // Erlaubt den Zeilenumbruch, falls nötig
+               .lineLimit(2) // Allows line breaks if necessary
                Spacer()
                }
                Spacer()
@@ -360,7 +429,7 @@ struct NiederschlagsCard: View {
           }
           .padding()
           .frame(maxWidth: .infinity, alignment: .leading)
-          .frame(width: bigCardWidth, height: bigCardheight) // Feste Höhe für ein konsistentes Raster
+          .frame(width: bigCardWidth, height: bigCardheight) // Fixed height for a consistent grid
           .background(Color.white.opacity(0.1))
           .cornerRadius(15)
           .overlay(
@@ -374,7 +443,7 @@ struct WindCard: View {
     let windSpeed: Double
     let windGust: Double
     let windDirection: Double
-    var arrowWeight: Font.Weight = .ultraLight // NEU: Gewicht des Pfeil-Fonts
+    var arrowWeight: Font.Weight = .ultraLight // NEW: Weight of the arrow font
    
     var body: some View {
       //  let windDirektion1: CLLocationDirection = windDirection
@@ -399,13 +468,13 @@ struct WindCard: View {
                     }
                     Divider()
                     HStack{
-                        Text("Windböen")
+                        Text("Wind Gusts")
                         Spacer()
                         Text(String(format: "%.0f km/h", windGust))
                     }
                     Divider()
                     HStack{
-                        Text("Windrichtung")
+                        Text("Wind Direction")
                         Spacer()
                         Text("\(String(format: "%.0f° ", windDirection)) ,\(cardinalDirection)")
                     }
@@ -420,7 +489,7 @@ struct WindCard: View {
                         Image(systemName: "arrow.up")
                             .resizable()
                             .aspectRatio(contentMode: .fit)
-                            .rotationEffect(.degrees(175))
+                            .rotationEffect(.degrees(windDirection))
                             .frame(width: 40, height: 40, alignment: .center)
                             .fontWeight(arrowWeight)
                     }
@@ -437,7 +506,7 @@ struct WindCard: View {
                     .fontWeight(.bold)
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
-                    .lineLimit(2) // Erlaubt den Zeilenumbruch, falls nötig
+                    .lineLimit(2) // Allows line breaks if necessary
                 Spacer()
             }
             Spacer()
@@ -445,7 +514,7 @@ struct WindCard: View {
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(width: bigCardWidth, height: bigCardheight) // Feste Höhe für ein konsistentes Raster
+        .frame(width: bigCardWidth, height: bigCardheight) // Fixed height for a consistent grid
         .background(Color.white.opacity(0.1))
         .cornerRadius(15)
         .overlay(
@@ -477,14 +546,14 @@ struct KompassCard: View {
                     .fontWeight(.bold)
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
-                    .lineLimit(2) // Erlaubt den Zeilenumbruch, falls nötig
+                    .lineLimit(2) // Allows line breaks if necessary
                 Spacer()
             }
             Spacer()
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(width: 150, height: 150) // Feste Höhe für ein konsistentes Raster
+        .frame(width: 150, height: 150) // Fixed height for a consistent grid
         .background(Color.white.opacity(0.1))
         .cornerRadius(15)
         .overlay(
@@ -494,54 +563,54 @@ struct KompassCard: View {
     }
 }
 
-/// Wandelt eine Gradzahl (Himmelsrichtung) in eine kardinale Himmelsrichtung (z.B. "N", "NW") um.
-/// Verwendet 16 Himmelsrichtungen für eine feinere Granularität.
+/// Converts a degree (direction) into a cardinal direction (e.g. "N", "NW").
+/// Uses 16 cardinal directions for finer granularity.
 ///
-/// - Parameter heading: Die Himmelsrichtung in Grad (0-359.9, wobei 0 Grad Norden ist).
-/// - Returns: Der String der entsprechenden Himmelsrichtung.
+/// - Parameter heading: The direction in degrees (0-359.9, where 0 degrees is North).
+/// - Returns: The string of the corresponding cardinal direction.
 /*
- // Beispiel innerhalb deiner KompassCard oder einer anderen View:
- // Angenommen, du hast einen WindDirection-Wert, z.B. von metricData.winddir oder metricData.windDirection
- let windDirection: CLLocationDirection = metricData?.winddir.map { Double($0) } ?? 0.0 // Oder metricData.windDirection ?? 0.0
+ // Example within your KompassCard or another View:
+ // Assuming you have a WindDirection value, e.g. from metricData.winddir or metricData.windDirection
+ let windDirection: CLLocationDirection = metricData?.winddir.map { Double($0) } ?? 0.0 // Or metricData.windDirection ?? 0.0
  let cardinalDirection = WeatherHelpers.getCardinalDirection(for: windDirection)
 
- // Dann kannst du `cardinalDirection` in deiner Text-View anzeigen
+ // Then you can display `cardinalDirection` in your Text View
  Text(cardinalDirection)
 */
- // MARK: - Hilfsstruktur für Wetterfunktionen
-// Diese Struktur kann an einer geeigneten Stelle in deiner Datei (z.B. oben, oder in einer eigenen Helper-Datei) platziert werden.
+ // MARK: - Helper structure for weather functions
+// This structure can be placed in a suitable location in your file (e.g. above, or in a separate Helper file).
 struct WeatherHelpers {
 
-    // Das Array der Himmelsrichtungen als statische Konstante
+    // The array of cardinal directions as a static constant
     static let cardinalDirections: [String] = [
         "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
         "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"
     ]
 
-    // Funktion zur Ermittlung der Himmelsrichtung
-    // Sie sollte weiterhin in ContentView.swift, aber mit diesen Anpassungen, funktionieren
+    // Function to determine the cardinal direction
+    // It should still work in ContentView.swift, but with these adjustments
     static func getCardinalDirection(for heading: CLLocationDirection) -> String {
-        // Sicherstellen, dass der übergebene Wert explizit als Double behandelt wird
+        // Ensure that the passed value is explicitly treated as a Double
         let headingValue = Double(heading)
 
-        // Sicherstellen, dass der Winkel positiv ist und im Bereich [0, 360) liegt
+        // Ensure that the angle is positive and in the range [0, 360)
         let normalizedHeading = headingValue.truncatingRemainder(dividingBy: 360.0)
 
-        // Um 22.5 Grad verschieben für korrekte Segmentzuweisung (halbe Segmentbreite)
+        // Shift by 22.5 degrees for correct segment assignment (half segment width)
         let shiftedHeading = (normalizedHeading + 22.5).truncatingRemainder(dividingBy: 360.0)
 
-        // Jeder Himmelsrichtung entspricht einem 22.5-Grad-Segment (360 / 16)
+        // Each cardinal direction corresponds to a 22.5-degree segment (360 / 16)
         let segmentWidth = 360.0 / Double(cardinalDirections.count)
 
-        // Teilen durch die Segmentbreite ergibt, in welchem Segment der Winkel liegt.
-        // Explizite Konvertierung zu Double vor der Division und dann zu Int
+        // Dividing by the segment width gives the segment in which the angle lies.
+        // Explicit conversion to Double before division and then to Int
         let rawIndex = shiftedHeading / segmentWidth
         let index = Int(rawIndex)
 
-        // Der resultierende Index sollte immer im gültigen Bereich des Arrays liegen.
-        // Eine Sicherheitsprüfung, falls doch ein unerwarteter Wert entsteht.
+        // The resulting index should always be within the valid range of the array.
+        // A safety check in case an unexpected value occurs.
         guard index >= 0 && index < cardinalDirections.count else {
-            return "N/A" // Oder eine geeignete Standardrichtung bei einem unerwarteten Index
+            return "N/A" // Or a suitable default direction for an unexpected index
         }
 
         return cardinalDirections[index]
@@ -549,18 +618,18 @@ struct WeatherHelpers {
 }
 
 struct MapCard: View {
-    // Dies muss ein @State sein, da die Karte die Region ändern kann (z.B. durch Zoomen/Schwenken des Benutzers).
+    // This must be an @State as the map can change the region (e.g. by zooming/panning by the user).
         @State private var region: MKCoordinateRegion
-        // Optional: Ein Marker für den Standort
+        // Optional: A marker for the location
         let locationName: String
         let coordinate: CLLocationCoordinate2D
         init(locationName: String, latitude: Double, longitude: Double) {
             self.locationName = locationName
             self.coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
-            // Initialisiere die Region mit dem übergebenen Standort
+            // Initialize the region with the passed location
             _region = State(initialValue: MKCoordinateRegion(
                 center: coordinate,
-                span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1) // Zoom-Level (kleinere Werte = stärkerer Zoom)
+                span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1) // Zoom level (smaller values = stronger zoom)
             ))
         }
     var body: some View {
@@ -568,7 +637,7 @@ struct MapCard: View {
             HStack {
                 Image(systemName: "cloud.sun.rain.circle.fill")
                     .foregroundColor(.white.opacity(0.7))
-                Text("Wetter Karte")
+                Text("Weather Map")
                     .font(.footnote)
                     .foregroundColor(.white)
                 Spacer()
@@ -577,10 +646,10 @@ struct MapCard: View {
             HStack(alignment: .center){
                 Spacer()
                 Map(coordinateRegion: $region, annotationItems: [IdentifiableLocation(id: UUID(), name: locationName, coordinate: coordinate)]) { location in
-                    // Optionale Annotation (Marker oder benutzerdefinierte Ansicht)
-                    MapMarker(coordinate: location.coordinate, tint: .red) // Ein einfacher roter Marker
+                    // Optional Annotation (Marker or custom view)
+                    MapMarker(coordinate: location.coordinate, tint: .red) // A simple red marker
                 }
-                .edgesIgnoringSafeArea(.all) // Karte über den gesamten Bildschirmbereich ausdehnen (optional)
+                .edgesIgnoringSafeArea(.all) // Extend map across entire screen area (optional)
                 .frame(width: 180, height: 250.0)
         //        Spacer()
             }
@@ -588,7 +657,7 @@ struct MapCard: View {
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(width: 200, height: 300) // Feste Höhe für ein konsistentes Raster
+        .frame(width: 200, height: 300) // Fixed height for a consistent grid
         .background(Color.white.opacity(0.1))
         .cornerRadius(15)
         .overlay(
@@ -598,7 +667,101 @@ struct MapCard: View {
     }
 }
 struct IdentifiableLocation: Identifiable {
-    let id: UUID // Eine eindeutige ID
+    let id: UUID // A unique ID
     let name: String
-    let coordinate: CLLocationCoordinate2D // Die Koordinaten des Standorts
+    let coordinate: CLLocationCoordinate2D // The coordinates of the location
+}
+
+// MARK: - HistoricalDataCard (New component for displaying historical data)
+struct HistoricalDataCard: View {
+    let observation: HistoricalObservation
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack {
+                Image(systemName: "calendar")
+                    .foregroundColor(.white.opacity(0.7))
+                Text(observation.formattedDateTime) // Displays date and time
+                    .font(.footnote)
+                    .foregroundColor(.white)
+                Spacer()
+            }
+            Divider().background(Color.white.opacity(0.3)) // Separator line
+            
+            HStack {
+                Text("Avg. Temp.:")
+                    .foregroundColor(.white.opacity(0.8))
+                Spacer()
+                // Access via observation.metric?.tempAvg
+                Text(observation.metric?.tempAvg.map { String(format: "%.1f°C", $0) } ?? "N/A")
+                    .foregroundColor(.white)
+            }
+            HStack {
+                Text("Max Temp.:")
+                    .foregroundColor(.white.opacity(0.8))
+                Spacer()
+                // Access via observation.metric?.tempHigh
+                Text(observation.metric?.tempHigh.map { String(format: "%.1f°C", $0) } ?? "N/A")
+                    .foregroundColor(.red)
+            }
+            HStack {
+                Text("Min Temp.:")
+                    .foregroundColor(.white.opacity(0.8))
+                Spacer()
+                // Access via observation.metric?.tempLow
+                Text(observation.metric?.tempLow.map { String(format: "%.1f°C", $0) } ?? "N/A")
+                    .foregroundColor(.blue)
+            }
+            Divider().background(Color.white.opacity(0.3)) // Separator line
+            
+            HStack {
+                Text("Precipitation:")
+                    .foregroundColor(.white.opacity(0.8))
+                Spacer()
+                // Access via observation.metric?.precipTotal
+                Text(observation.metric?.precipTotal.map { String(format: "%.1f l", $0) } ?? "N/A")
+                    .foregroundColor(.white)
+            }
+            
+            HStack {
+                Text("Avg. Wind:")
+                    .foregroundColor(.white.opacity(0.8))
+                Spacer()
+                // Access via observation.metric?.windspeedAvg
+                Text(observation.metric?.windspeedAvg.map { String(format: "%.0f km/h", Double($0)) } ?? "N/A")
+                    .foregroundColor(.white)
+            }
+            
+            HStack {
+                Text("Avg. Humidity.:")
+                    .foregroundColor(.white.opacity(0.8))
+                Spacer()
+                // Access via observation.humidityAvg (since it's on top-level as per your JSON and PWSModels)
+                Text(observation.humidityHigh.map { String(format: "%.0f%%", Double($0)) } ?? "N/A")
+                    .foregroundColor(.white)
+            }
+            
+            // Add more relevant historical data here
+        }
+        .padding()
+        .frame(width: smallCardWidth + 50, height: 220) // Adjusted size for more information
+        .background(Color.white.opacity(0.1))
+        .cornerRadius(15)
+        .overlay(
+            RoundedRectangle(cornerRadius: 15)
+                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+        )
+        // Debug outputs moved to onAppear
+        .onAppear {
+            print("--- HistoricalDataCard Debug ---")
+            print("obsTimeLocal: \(observation.obsTimeLocal ?? "nil")")
+            print("tempAvg (from metric): \(observation.metric?.windspeedAvg ?? 100)")
+           /* print("tempHigh (from metric): \(observation.metric?.tempHigh.map(String.init) ?? "nil")")
+            print("tempLow (from metric): \(observation.metric?.tempLow.map(String.init) ?? "nil")")
+            print("precipTotal (from metric): \(observation.metric?.precipTotal.map(String.init) ?? "nil")")
+            print("windspeedAvg (from metric): \(observation.metric?.windspeedAvg.map(String.init) ?? "nil")")
+            print("humidityAvg (top-level): \(observation.humidityAvg.map(String.init) ?? "nil")")*/
+            print("------------------------------")
+        }
+    }
 }

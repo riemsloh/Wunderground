@@ -9,6 +9,7 @@ import SwiftUI // Für ObservableObject, @Published, @MainActor, @AppStorage
 class PWSViewModel: ObservableObject {
     // Veröffentlichte Eigenschaften, die die UI aktualisieren, wenn sie sich ändern.
     @Published var observation: Observation? // Das aktuelle Wetterbeobachtungs-Objekt
+    @Published var historicalObservations: [HistoricalObservation] = [] // Neu: Für historische Daten
     @Published var isLoading: Bool = false // Zeigt an, ob Daten geladen werden
     @Published var errorMessage: String? // Speichert Fehlermeldungen
     
@@ -89,7 +90,7 @@ class PWSViewModel: ObservableObject {
             
         } catch let decodingError as DecodingError {
             // Spezifische Fehler beim Decodieren abfangen.
-            print("Decodierungsfehler: \(decodingError)")
+            print("Decodierungsfehler: \(decodingError.localizedDescription)") // Angepasst
             errorMessage = "Fehler beim Decodieren der Wetterdaten. Bitte überprüfen Sie das Datenformat."
         } catch {
             // Allgemeine Netzwerk- oder andere Fehler abfangen.
@@ -100,6 +101,78 @@ class PWSViewModel: ObservableObject {
         isLoading = false // Ladezustand deaktivieren
     }
     
+    /// Ruft historische Wetterdaten asynchron von der Weather Company API ab.
+    /// Verwendet die in AppStorage gespeicherten Werte für Station ID und API-Schlüssel.
+    /// - Parameter date: Das Datum für die historischen Daten im Format "YYYYMMDD".
+    /// - Parameter units: Die Maßeinheit für die Daten (Standard: "m" für metrisch).
+    @MainActor
+    func fetchHistoricalWeatherData(date: String, units: String = "m") async {
+        isLoading = true // Ladezustand aktivieren
+        errorMessage = nil // Vorherige Fehlermeldungen zurücksetzen
+
+        guard !storedStationId.isEmpty, !storedApiKey.isEmpty,
+              storedStationId != "YOUR_STATION_ID", storedApiKey != "YOUR_WEATHER_API_KEY" else {
+            errorMessage = "Bitte geben Sie eine gültige Station ID und einen API-Schlüssel in den Einstellungen ein."
+            isLoading = false
+            return
+        }
+
+        let historyBaseURL = "https://api.weather.com/v2/pws/history/hourly" // Oder /daily, /all
+        var components = URLComponents(string: historyBaseURL)
+        components?.queryItems = [
+            URLQueryItem(name: "stationId", value: storedStationId),
+            URLQueryItem(name: "format", value: "json"),
+            URLQueryItem(name: "units", value: units),
+            URLQueryItem(name: "date", value: date), // Das Datum im Format "YYYYMMDD"
+            URLQueryItem(name: "apiKey", value: storedApiKey)
+        ]
+
+        guard let url = components?.url else {
+            errorMessage = "Ungültige URL-Konfiguration für historische Daten."
+            isLoading = false
+            return
+        }
+        
+        print("Versuche, historische Daten abzurufen von URL: \(url.absoluteString)") // NEU: URL loggen
+
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            
+            // NEU: HTTP Status Code loggen
+            if let httpResponse = response as? HTTPURLResponse {
+                print("HTTP Status Code für historische Daten: \(httpResponse.statusCode)")
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    errorMessage = "Serverfehler beim Abruf historischer Daten. Statuscode: \(httpResponse.statusCode)"
+                    isLoading = false
+                    // NEU: Rohe Antwort bei Fehler loggen
+                    print("Fehlerhafte rohe Antwort für historische Daten: \(String(data: data, encoding: .utf8) ?? "Keine Daten")")
+                    return
+                }
+            }
+            
+            // NEU: Rohe JSON-Daten loggen (vorsicht bei sehr großen Antworten)
+            print("Rohe JSON-Antwort für historische Daten: \(String(data: data, encoding: .utf8) ?? "Ungültige Daten")")
+
+            let decoder = JSONDecoder()
+            let historicalResponse = try decoder.decode(PWSHistoricalResponse.self, from: data)
+            historicalObservations = historicalResponse.observations ?? []
+
+            if historicalObservations.isEmpty {
+                errorMessage = "Keine historischen Daten für das angegebene Datum gefunden."
+            } else {
+                print("Historische Wetterdaten für \(date) erfolgreich geladen! Anzahl Beobachtungen: \(historicalObservations.count)")
+            }
+
+        } catch let decodingError as DecodingError {
+            print("Decodierungsfehler für historische Daten: \(decodingError.localizedDescription)") // Angepasst
+            errorMessage = "Fehler beim Decodieren der historischen Wetterdaten. Bitte überprüfen Sie das Datenformat der API-Antwort und des Modells."
+        } catch {
+            print("Netzwerkfehler für historische Daten: \(error)")
+            errorMessage = "Fehler beim Abrufen der historischen Wetterdaten: \(error.localizedDescription)"
+        }
+        isLoading = false
+    }
+
     /// Startet einen Timer, der alle 60 Sekunden Wetterdaten abruft.
     /// Ungültig macht jeden zuvor gestarteten Timer.
     ///
