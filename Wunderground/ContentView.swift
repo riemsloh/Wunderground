@@ -29,7 +29,7 @@ struct ContentView: View {
                             VStack(spacing: 15){
                                 HStack(spacing: 15){
                                     WindCard(windSpeed: metricData.windSpeed ?? Double(Int(0.0)), windGust: metricData.windGust ?? Double(Int(0.0)), windDirection: Double(obs.winddir ?? Int(0.0)))
-                                    NiederschlagsCard(rainToday: metricData.precipTotal ?? 0.0, rainYesterday: 0.0, rainWeek: 0.0)
+                                    NiederschlagsCard(rainToday: metricData.precipTotal ?? 0.0, rainYesterday: pwsViewModel.lastDayPrecipitation ?? 0.0, rainWeek: pwsViewModel.currentWeekPrecipitation ?? 0.0)
                                 }
                                 HStack(spacing: 15){
                                     TemperaturCard(title: "Temperatur", value: metricData.temp.map { String(format: "%.0f", $0) } ?? "N/A", iconName: "thermometer.sun.circle")
@@ -85,7 +85,7 @@ struct ContentView: View {
                                 .tint(.white)
                                 .padding()
                         } else if !pwsViewModel.historicalObservations.isEmpty {
-                            ScrollView(.horizontal, showsIndicators: false) {
+                            ScrollView(.horizontal, showsIndicators: true) {
                                 HStack(spacing: 15) {
                                     ForEach(pwsViewModel.historicalObservations) { obs in
                                         HistoricalDataCard(observation: obs)

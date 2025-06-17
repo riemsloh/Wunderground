@@ -10,6 +10,8 @@ class PWSViewModel: ObservableObject {
     // Veröffentlichte Eigenschaften, die die UI aktualisieren, wenn sie sich ändern.
     @Published var observation: Observation? // Das aktuelle Wetterbeobachtungs-Objekt
     @Published var historicalObservations: [HistoricalObservation] = [] // Neu: Für historische Daten
+    @Published var lastDayPrecipitation: Double? = nil // NEU: Gesamtregenmenge des Vortages
+    @Published var currentWeekPrecipitation: Double? = nil // NEU: Gesamtregenmenge der laufenden Woche
     @Published var isLoading: Bool = false // Zeigt an, ob Daten geladen werden
     @Published var errorMessage: String? // Speichert Fehlermeldungen
     
@@ -172,61 +174,216 @@ class PWSViewModel: ObservableObject {
         }
         isLoading = false
     }
-
-    /// Startet einen Timer, der alle 60 Sekunden Wetterdaten abruft.
-    /// Ungültig macht jeden zuvor gestarteten Timer.
-    ///
-
-    func startFetchingDataAutomatically() {
-            // Vorhandenen Timer ungültig machen, um doppelte Timer zu vermeiden
-            timer?.invalidate()
-            
-            // Nur starten, wenn automatische Aktualisierung aktiviert ist
-            guard autoRefreshEnabled else { return }
-
-            // Neuen Timer erstellen, der alle 60 Sekunden feuert
-            // [weak self] in der Timer-Closure verwenden, um Retain-Cycles zu vermeiden
-            timer = Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) { [weak self] _ in
-                // Sicherstellen, dass self noch existiert, bevor fetchWeatherData aufgerufen wird
-#if swift(>=6.0)
-                Task { @MainActor in
-                    await self?.fetchWeatherData() // Hier self? verwenden
-                }
-#elseif swift(<5.9)
-                Task {
-                    await self?.fetchWeatherData() // Hier self? verwenden
-                }
-#else
-                Task {
-                    await self?.fetchWeatherData() // Hier self? verwenden
-                }
-#endif
-            }
-            // Sofortigen ersten Abruf starten
-            // Auch hier [weak self] verwenden, um Probleme bei der Deallokation von ViewModel zu vermeiden
-#if swift(>=6.0)
-        Task { @MainActor in
-            await self.fetchWeatherData() // Hier self? verwenden
-            }
-#elseif swift(<5.9)
-        Task {
-            await self.fetchWeatherData() // Hier self? verwenden
-            }
-#else
-        Task {
-            await self.fetchWeatherData() // Hier self? verwenden
-            }
-        #endif
+    /// NEU: Ruft die Gesamtregenmenge des Vortages ab.
+    @MainActor
+    func fetchPreviousDayPrecipitation(units: String = "m") async {
+        guard !storedStationId.isEmpty, !storedApiKey.isEmpty,
+              storedStationId != "YOUR_STATION_ID", storedApiKey != "YOUR_WEATHER_API_KEY" else {
+            print("Warnung: Station ID oder API-Schlüssel fehlen für Vortagesniederschlag.")
+            lastDayPrecipitation = nil
+            return
         }
-    
-    /// Stoppt den automatischen Datenabruf-Timer.
-    func stopFetchingDataAutomatically() {
-        timer?.invalidate()
-        timer = nil
+        
+        // Berechne das Datum für den Vortag
+        guard let previousDay = Calendar.current.date(byAdding: .day, value: -1, to: Date()) else {
+            print("Fehler: Konnte das Datum des Vortages nicht berechnen.")
+            lastDayPrecipitation = nil
+            return
+        }
+        
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd"
+        let dateString = formatter.string(from: previousDay)
+        
+        let historyDailyURL = "https://api.weather.com/v2/pws/history/daily"
+        var components = URLComponents(string: historyDailyURL)
+        components?.queryItems = [
+            URLQueryItem(name: "stationId", value: storedStationId),
+            URLQueryItem(name: "format", value: "json"),
+            URLQueryItem(name: "units", value: units),
+            URLQueryItem(name: "date", value: dateString),
+            URLQueryItem(name: "apiKey", value: storedApiKey)
+        ]
+        
+        guard let url = components?.url else {
+            print("Ungültige URL-Konfiguration für Vortagesniederschlag.")
+            lastDayPrecipitation = nil
+            return
+        }
+        
+        print("Versuche, Vortagesniederschlag abzurufen von URL: \(url.absoluteString)")
+        
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            if let httpResponse = response as? HTTPURLResponse {
+                print("HTTP Status Code für Vortagesniederschlag: \(httpResponse.statusCode)")
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    print("Serverfehler beim Abruf Vortagesniederschlag. Statuscode: \(httpResponse.statusCode)")
+                    lastDayPrecipitation = nil
+                    return
+                }
+            }
+            
+            let decoder = JSONDecoder()
+            // Die Antwort für history/daily ist auch ein PWSHistoricalResponse mit einem Array von Observations
+            let historicalResponse = try decoder.decode(PWSHistoricalResponse.self, from: data)
+            
+            // Für tägliche Zusammenfassungen sollte es in der Regel nur eine Beobachtung geben.
+            // Wir suchen nach dem 'precipTotal' Wert im 'metric'-Objekt.
+            if let dailyObservation = historicalResponse.observations?.first {
+                lastDayPrecipitation = dailyObservation.metric?.precipTotal
+                print("Vortagesniederschlag erfolgreich geladen: \(lastDayPrecipitation ?? 0.0) mm")
+            } else {
+                print("Keine täglichen Beobachtungsdaten für den Vortag gefunden.")
+                lastDayPrecipitation = nil
+            }
+            
+        } catch {
+            print("Fehler beim Abrufen Vortagesniederschlag: \(error.localizedDescription)")
+            lastDayPrecipitation = nil
+        }
     }
     
-    // Beim Deinitialisieren des ViewModels den Timer stoppen, um Memory Leaks zu vermeiden
-    deinit {
-        stopFetchingDataAutomatically()
-    }
-}
+    /// NEU: Ruft die Gesamtregenmenge der laufenden Woche ab.
+       @MainActor
+       func fetchCurrentWeekPrecipitation(units: String = "m") async {
+           guard !storedStationId.isEmpty, !storedApiKey.isEmpty,
+                 storedStationId != "YOUR_STATION_ID", storedApiKey != "YOUR_WEATHER_API_KEY" else {
+               print("Warnung: Station ID oder API-Schlüssel fehlen für Wochenniederschlag.")
+               currentWeekPrecipitation = nil
+               return
+           }
+
+           let calendar = Calendar.current
+           // Finde den ersten Tag der aktuellen Woche (Montag)
+           guard let startOfWeek = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: Date())) else {
+               print("Fehler: Konnte den Wochenanfang nicht berechnen.")
+               currentWeekPrecipitation = nil
+               return
+           }
+           
+           let formatter = DateFormatter()
+           formatter.dateFormat = "yyyyMMdd"
+           let startDateString = formatter.string(from: startOfWeek)
+           let endDateString = formatter.string(from: Date()) // Bis heute (einschließlich)
+
+           let historyDailyURL = "https://api.weather.com/v2/pws/history/daily"
+           var components = URLComponents(string: historyDailyURL)
+           components?.queryItems = [
+               URLQueryItem(name: "stationId", value: storedStationId),
+               URLQueryItem(name: "format", value: "json"),
+               URLQueryItem(name: "units", value: units),
+               URLQueryItem(name: "startDate", value: startDateString), // Startdatum der Woche
+               URLQueryItem(name: "endDate", value: endDateString),     // Enddatum (heute)
+               URLQueryItem(name: "apiKey", value: storedApiKey)
+           ]
+
+           guard let url = components?.url else {
+               print("Ungültige URL-Konfiguration für Wochenniederschlag.")
+               currentWeekPrecipitation = nil
+               return
+           }
+
+           print("Versuche, Wochenniederschlag abzurufen von URL: \(url.absoluteString)")
+
+           do {
+               let (data, response) = try await URLSession.shared.data(from: url)
+               if let httpResponse = response as? HTTPURLResponse {
+                   print("HTTP Status Code für Wochenniederschlag: \(httpResponse.statusCode)")
+                   guard (200...299).contains(httpResponse.statusCode) else {
+                       print("Serverfehler beim Abruf Wochenniederschlag. Statuscode: \(httpResponse.statusCode)")
+                       currentWeekPrecipitation = nil
+                       return
+                   }
+               }
+
+               let decoder = JSONDecoder()
+               let historicalResponse = try decoder.decode(PWSHistoricalResponse.self, from: data)
+
+               var totalWeekPrecipitation: Double = 0.0
+               if let observations = historicalResponse.observations {
+                   for obs in observations {
+                       totalWeekPrecipitation += obs.metric?.precipTotal ?? 0.0
+                   }
+               }
+               currentWeekPrecipitation = totalWeekPrecipitation
+               print("Wochenniederschlag erfolgreich geladen: \(currentWeekPrecipitation ?? 0.0) mm")
+
+           } catch {
+               print("Fehler beim Abrufen Wochenniederschlag: \(error.localizedDescription)")
+               currentWeekPrecipitation = nil
+           }
+       }
+    /// Startet einen Timer, der alle 60 Sekunden Wetterdaten abruft.
+     /// Ungültig macht jeden zuvor gestarteten Timer.
+     ///
+     func startFetchingDataAutomatically() {
+             // Vorhandenen Timer ungültig machen, um doppelte Timer zu vermeiden
+             timer?.invalidate()
+             
+             // Nur starten, wenn automatische Aktualisierung aktiviert ist
+             guard autoRefreshEnabled else { return }
+
+             // Neuen Timer erstellen, der alle 60 Sekunden feuert
+             // [weak self] in der Timer-Closure verwenden, um Retain-Cycles zu vermeiden
+             timer = Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) { [weak self] _ in
+                 // Sicherstellen, dass self noch existiert, bevor fetchWeatherData aufgerufen wird
+ #if swift(>=6.0)
+                 Task { @MainActor in
+                     await self?.fetchWeatherData() // Hier self? verwenden
+                     await self?.fetchPreviousDayPrecipitation() // NEU: Auch Vortagesniederschlag aktualisieren
+                     await self?.fetchCurrentWeekPrecipitation() // // Viederschlag der laufenden Woche
+                 }
+ #elseif swift(<5.9)
+                 Task {
+                     await self?.fetchWeatherData() // Hier self? verwenden
+                     await self?.fetchPreviousDayPrecipitation() // NEU: Auch Vortagesniederschlag aktualisieren
+                     await self?.fetchCurrentWeekPrecipitation() // // Viederschlag der laufenden Woche
+
+                 }
+ #else
+                 Task {
+                     await self?.fetchWeatherData() // Hier self? verwenden
+                     await self?.fetchPreviousDayPrecipitation() // NEU: Auch Vortagesniederschlag aktualisieren
+                     await self?.fetchCurrentWeekPrecipitation() // // Viederschlag der laufenden Woche
+
+                 }
+ #endif
+             }
+             // Sofortigen ersten Abruf starten
+             // Auch hier [weak self] verwenden, um Probleme bei der Deallokation von ViewModel zu vermeiden
+ #if swift(>=6.0)
+         Task { @MainActor in
+             await self.fetchWeatherData() // Hier self? verwenden
+             await self.fetchPreviousDayPrecipitation() // NEU: Auch Vortagesniederschlag beim Start abrufen
+             await self.fetchCurrentWeekPrecipitation() // // Viederschlag der laufenden Woche
+
+             }
+ #elseif swift(<5.9)
+         Task {
+             await self.fetchWeatherData() // Hier self? verwenden
+             await self.fetchPreviousDayPrecipitation() // NEU: Auch Vortagesniederschlag beim Start abrufen
+             await self.fetchCurrentWeekPrecipitation() // // Viederschlag der laufenden Woche
+
+             }
+ #else
+         Task {
+             await self.fetchWeatherData() // Hier self? verwenden
+             await self.fetchPreviousDayPrecipitation() // NEU: Auch Vortagesniederschlag beim Start abrufen
+             await self.fetchCurrentWeekPrecipitation() // // Viederschlag der laufenden Woche
+
+             }
+         #endif
+         }
+     
+     /// Stoppt den automatischen Datenabruf-Timer.
+     func stopFetchingDataAutomatically() {
+         timer?.invalidate()
+         timer = nil
+     }
+     
+     // Beim Deinitialisieren des ViewModels den Timer stoppen, um Memory Leaks zu vermeiden
+     deinit {
+         stopFetchingDataAutomatically()
+     }
+ }
