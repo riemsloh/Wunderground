@@ -483,9 +483,10 @@ struct WindCard: View {
                 HStack{
                     ZStack{
                         Spacer()
-                        Circle()
+                       /* Circle()
                             .stroke(Color.blue, lineWidth: 1)
-                            .frame(width: 60, height: 60, alignment: .center)
+                            .frame(width: 60, height: 60, alignment: .center)*/
+                        RadialTicksView()
                         Image(systemName: "arrow.up")
                             .resizable()
                             .aspectRatio(contentMode: .fit)
@@ -765,3 +766,82 @@ struct HistoricalDataCard: View {
         }
     }
 }
+
+// MARK: - der Wind Kompass
+struct RadialTicksView: View {
+    var body: some View {
+        ZStack {
+                   RadialTicksShape(tickStep: 10)
+                       .stroke(Color.teal.opacity(0.6), lineWidth: 1)
+                       .frame(width: 70, height: 70)
+                   
+                   CompassLabels()
+                .frame(width: 70, height: 70)
+               }
+               .padding()
+            
+    }
+}
+
+struct RadialTicksShape: Shape {
+    var tickStep: CGFloat // z. B. 30 oder 5
+    
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        
+        let center = CGPoint(x: rect.midX, y: rect.midY)
+        let radius = min(rect.width, rect.height) / 2
+        let tickLength: CGFloat = 12
+        let tickCount = Int(360 / tickStep)
+
+        for i in 0..<tickCount {
+            let angleDeg = CGFloat(i) * tickStep
+            let angleRad = angleDeg * .pi / 180
+            
+            let start = CGPoint(
+                x: center.x + cos(angleRad) * (radius - tickLength),
+                y: center.y + sin(angleRad) * (radius - tickLength)
+            )
+            
+            let end = CGPoint(
+                x: center.x + cos(angleRad) * radius,
+                y: center.y + sin(angleRad) * radius
+            )
+            
+            path.move(to: start)
+            path.addLine(to: end)
+        }
+        
+        return path
+    }
+}
+
+struct CompassLabels: View {
+    let directions = ["N", "O", "S", "W"]
+    
+    var body: some View {
+        GeometryReader { geo in
+            let size = min(geo.size.width, geo.size.height)
+            let radius = size / 2
+            let labelOffset: CGFloat = 10 // Abstand außerhalb des Kreises
+            
+            ZStack {
+                Text("N")
+                    .position(x: geo.size.width / 2,
+                              y: geo.size.height / 2 - radius - labelOffset)
+                Text("O")
+                    .position(x: geo.size.width / 2 + radius + labelOffset,
+                              y: geo.size.height / 2)
+                Text("S")
+                    .position(x: geo.size.width / 2,
+                              y: geo.size.height / 2 + radius + labelOffset)
+                Text("W")
+                    .position(x: geo.size.width / 2 - radius - labelOffset,
+                              y: geo.size.height / 2)
+            }
+            .font(.headline)
+            .foregroundColor(.teal.opacity(0.7))
+        }
+    }
+}
+
