@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		ED275AA22E05A5170011C0C3 /* DailyForecastModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED275AA12E05A5160011C0C3 /* DailyForecastModels.swift */; };
+		ED275AA42E05A65A0011C0C3 /* DailyForecastViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED275AA32E05A6250011C0C3 /* DailyForecastViewModel.swift */; };
 		ED8A5F8A2DFD6DAC00ABB713 /* WundergroundApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED8A5F892DFD6DAC00ABB713 /* WundergroundApp.swift */; };
 		ED8A5F8C2DFD6DAC00ABB713 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED8A5F8B2DFD6DAC00ABB713 /* ContentView.swift */; };
 		ED8A5F8E2DFD6DB100ABB713 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = ED8A5F8D2DFD6DB100ABB713 /* Assets.xcassets */; };
@@ -17,6 +19,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		ED275AA12E05A5160011C0C3 /* DailyForecastModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyForecastModels.swift; sourceTree = "<group>"; };
+		ED275AA32E05A6250011C0C3 /* DailyForecastViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyForecastViewModel.swift; sourceTree = "<group>"; };
 		ED7E14382E03587C007082D9 /* Wunderground-IOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Wunderground-IOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		ED8A5F862DFD6DAC00ABB713 /* Wunderground.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Wunderground.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		ED8A5F892DFD6DAC00ABB713 /* WundergroundApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WundergroundApp.swift; sourceTree = "<group>"; };
@@ -72,11 +76,13 @@
 		ED8A5F882DFD6DAC00ABB713 /* Wunderground */ = {
 			isa = PBXGroup;
 			children = (
+				ED275AA32E05A6250011C0C3 /* DailyForecastViewModel.swift */,
 				ED8A5F9C2DFD90BF00ABB713 /* SettingsView.swift */,
 				ED8A5F992DFD8EDD00ABB713 /* PWSModels.swift */,
 				ED8A5F982DFD8EDD00ABB713 /* PWSViewModel.swift */,
 				ED8A5F892DFD6DAC00ABB713 /* WundergroundApp.swift */,
 				ED8A5F8B2DFD6DAC00ABB713 /* ContentView.swift */,
+				ED275AA12E05A5160011C0C3 /* DailyForecastModels.swift */,
 				ED8A5F8D2DFD6DB100ABB713 /* Assets.xcassets */,
 				ED8A5F922DFD6DB100ABB713 /* Wunderground.entitlements */,
 				ED8A5F8F2DFD6DB100ABB713 /* Preview Content */,
@@ -202,6 +208,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				ED275AA42E05A65A0011C0C3 /* DailyForecastViewModel.swift in Sources */,
+				ED275AA22E05A5170011C0C3 /* DailyForecastModels.swift in Sources */,
 				ED8A5F9D2DFD90BF00ABB713 /* SettingsView.swift in Sources */,
 				ED8A5F9B2DFD8EDE00ABB713 /* PWSModels.swift in Sources */,
 				ED8A5F8C2DFD6DAC00ABB713 /* ContentView.swift in Sources */,
