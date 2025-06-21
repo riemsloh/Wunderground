@@ -1,139 +1,264 @@
 //
 //  DailyForecastModels.swift
-//  Wunderground
+//  DeineApp
 //
-//  Created by Olaf Lueg on 20.06.25.
+//  Created by [Dein Name] on [Aktuelles Datum].
+//  Copyright © [Aktuelles Jahr] [Dein Unternehmen]. All rights reserved.
 //
 
 import Foundation
-//
-//  DailyForecastModels.swift
 
-
-import Foundation
-
-// MARK: - Daily Forecast Models
-/// Top-Level-Struktur für die tägliche Vorhersage-API-Antwort
-struct DailyForecastResponse: Codable {
-    let forecasts: [DailyForecast]?
+// MARK: - Daily Forecast API Response - Matches the EXACT provided JSON structure
+/// Repräsentiert die gesamte Rohdaten-API-Antwort für die tägliche Vorhersage,
+/// wie sie im von Ihnen bereitgestellten JSON-Beispiel vorliegt.
+struct DailyForecastAPIResponse: Codable {
+    let calendarDayTemperatureMax: [Int?]?
+    let calendarDayTemperatureMin: [Int?]?
+    let dayOfWeek: [String]?
+    let expirationTimeUtc: [Int]?
+    let moonPhase: [String]?
+    let moonPhaseCode: [String]?
+    let moonPhaseDay: [Int]?
+    let moonriseTimeLocal: [String?]?
+    let moonriseTimeUtc: [Int?]?
+    let moonsetTimeLocal: [String?]?
+    let moonsetTimeUtc: [Int?]?
+    let narrative: [String]?
+    let qpf: [Double]? // Quantitative Precipitation Forecast
+    let qpfSnow: [Double]? // Quantitative Precipitation Forecast Snow
+    let sunriseTimeLocal: [String?]?
+    let sunriseTimeUtc: [Int?]?
+    let sunsetTimeLocal: [String?]?
+    let sunsetTimeUtc: [Int?]?
+    let temperatureMax: [Int?]?
+    let temperatureMin: [Int?]?
+    let validTimeLocal: [String]?
+    let validTimeUtc: [Int]?
+    let daypart: [DaypartDataArrays]? // Dies ist ein Array, das ein oder mehrere DaypartDataArrays-Objekte enthält
 }
 
-/// Repräsentiert eine einzelne tägliche Vorhersage
-struct DailyForecast: Codable, Identifiable {
-    let id = UUID() // Für SwiftUI ForEach
+// MARK: - DaypartDataArrays - Matches the object INSIDE the 'daypart' array
+/// Diese Struktur repräsentiert das Objekt innerhalb des 'daypart'-Arrays der API-Antwort.
+/// Jede Eigenschaft ist hier ein Array von Werten, da das JSON diese so strukturiert.
+struct DaypartDataArrays: Codable {
+    let cloudCover: [Int?]?
+    let dayOrNight: [String?]?
+    let daypartName: [String?]?
+    let iconCode: [Int?]?
+    let iconCodeExtend: [Int?]?
+    let narrative: [String?]?
+    let precipChance: [Int?]?
+    let precipType: [String?]?
+    let qpf: [Double?]?
+    let qpfSnow: [Double?]?
+    let qualifierCode: [String?]?
+    let qualifierPhrase: [String?]?
+    let relativeHumidity: [Int?]?
+    let snowRange: [String?]?
+    let temperature: [Int?]?
+    let temperatureHeatIndex: [Int?]?
+    let temperatureWindChill: [Int?]?
+    let thunderCategory: [String?]?
+    let thunderIndex: [Int?]?
+    let uvDescription: [String?]?
+    let uvIndex: [Int?]?
+    let windDirection: [Int?]?
+    let windDirectionCardinal: [String?]?
+    let windPhrase: [String?]?
+    let windSpeed: [Int?]?
+    let wxPhraseLong: [String?]?
+    let wxPhraseShort: [String?]?
+}
 
-    let classProperty: String? // "day"
-    let expireTimeGmt: Int?
-    let fcstValid: Int?
-    let fcstValidLocal: String? // z.B. "2025-06-18T07:00:00+0200"
-    let num: Int? // Tägliche Nummer (Tag 1, Tag 2, etc.)
-    let maxTemp: Int? // Höchste Tagestemperatur
-    let minTemp: Int? // Niedrigste Tagestemperatur
-    let phrase32Char: String? // Kurze Textbeschreibung (z.B. "Slight Chance Rain")
-    let phrase22Char: String?
-    let phrase12Char: String?
-    let dayOfWeek: String? // z.B. "Wed"
-    let dow: String? // z.B. "WED"
-    let sunriseTimeLocal: String? // z.B. "05:07:00"
-    let sunsetTimeLocal: String? // z.B. "21:30:00"
-    let moonriseTimeLocal: String?
-    let moonsetTimeLocal: String?
-    let moonPhase: String? // z.B. "Waning Crescent"
-    let moonPhaseCode: String?
-    let tempMax: Int? // (Alternativ zu maxTemp)
-    let tempMin: Int? // (Alternativ zu minTemp)
-    let precipChance: Int? // Precipitation Probability
-    let precipType: String? // z.B. "rain"
-    let qpf: Double? // Quantitative Precipitation Forecast (Niederschlagsmenge)
-    let snowQpf: Double?
-    let daytime: DailyPeriodForecast? // Details für den Tag
-    let nighttime: DailyPeriodForecast? // Details für die Nacht
+// MARK: - SingleDaypartForecast (Helper for individual Day/Night periods)
+/// Eine Hilfsstruktur, die die Daten für einen einzelnen Tages- oder Nachtteil enthält.
+/// Diese wird aus den Arrays in DaypartDataArrays bei einem bestimmten Index erstellt.
+struct SingleDaypartForecast: Identifiable {
+    let id = UUID()
     
-    // CodingKeys, um JSON-Schlüssel zu Eigenschaftsnamen zuzuordnen
-    enum CodingKeys: String, CodingKey {
-        case classProperty = "class"
-        case expireTimeGmt = "expire_time_gmt"
-        case fcstValid = "fcst_valid"
-        case fcstValidLocal = "fcst_valid_local"
-        case num
-        case maxTemp = "max_temp"
-        case minTemp = "min_temp"
-        case phrase32Char = "phrase_32char"
-        case phrase22Char = "phrase_22char"
-        case phrase12Char = "phrase_12char"
-        case dayOfWeek = "day_of_week"
-        case dow
-        case sunriseTimeLocal = "sunrise_time_local"
-        case sunsetTimeLocal = "sunset_time_local"
-        case moonriseTimeLocal = "moonrise_time_local"
-        case moonsetTimeLocal = "moonset_time_local"
-        case moonPhase = "moon_phase"
-        case moonPhaseCode = "moon_phase_code"
-        case tempMax = "temp_max"
-        case tempMin = "temp_min"
-        case precipChance = "precip_chance"
-        case precipType = "precip_type"
-        case qpf
-        case snowQpf = "snow_qpf"
-        case daytime = "day" // 'day' Feld im JSON
-        case nighttime = "night" // 'night' Feld im JSON
-    }
-
-    // Formatiert das lokale Vorhersagedatum (z.B. "Mittwoch, 18. Juni")
-    var formattedDate: String {
-        guard let dateString = fcstValidLocal else { return "N/A" }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ" // Passt zum ISO 8601 Format
-        if let date = formatter.date(from: dateString) {
-            formatter.dateFormat = "EEEE, dd. MMMM" // z.B. "Mittwoch, 18. Juni"
-            formatter.locale = Locale(identifier: "de_DE")
-            return formatter.string(from: date)
-        }
-        return "N/A"
-    }
-}
-
-/// Details für eine Tages- oder Nachtperiode innerhalb einer täglichen Vorhersage
-struct DailyPeriodForecast: Codable {
-    let precipsAllowed: Bool?
+    let cloudCover: Int?
+    let dayOrNight: String?
+    let daypartName: String?
+    let iconCode: Int?
+    let iconCodeExtend: Int?
+    let narrative: String?
+    let precipChance: Int?
+    let precipType: String?
+    let qpf: Double?
+    let qpfSnow: Double?
+    let qualifierCode: String?
+    let qualifierPhrase: String?
+    let relativeHumidity: Int?
+    let snowRange: String?
+    let temperature: Int?
+    let temperatureHeatIndex: Int?
+    let temperatureWindChill: Int?
+    let thunderCategory: String?
+    let thunderIndex: Int?
+    let uvDescription: String?
+    let uvIndex: Int?
+    let windDirection: Int?
+    let windDirectionCardinal: String?
+    let windPhrase: String?
+    let windSpeed: Int?
     let wxPhraseLong: String?
     let wxPhraseShort: String?
-    let wxIcon: Int?
-    let iconCode: Int?
-    let temperature: Int? // Hier könnte 'temp' oder 'temperature' sein
-    let humidity: Int?
-    let windSpeed: Int?
-    let windDir: Int?
-    let windDirCardinal: String?
-    let gust: Int?
-    let pop: Int? // Precipitation Probability
-    let precipType: String?
-    let qpf: Double? // Niederschlagsmenge
-    let snowQpf: Double?
-    let uvIndex: Int?
-    let uvDescription: String?
-    let cloudCover: Int?
-    let pressureMeanSeaLevel: Double? // Mittlerer Meeresspiegeldruck
+    
+    // Initialisierer, um einen SingleDaypartForecast aus DaypartDataArrays und einem Index zu erstellen
+    init(data: DaypartDataArrays, index: Int) {
+        self.cloudCover = data.cloudCover?.indices.contains(index) == true ? data.cloudCover?[index] : nil
+        self.dayOrNight = data.dayOrNight?.indices.contains(index) == true ? data.dayOrNight?[index] : nil
+        self.daypartName = data.daypartName?.indices.contains(index) == true ? data.daypartName?[index] : nil
+        self.iconCode = data.iconCode?.indices.contains(index) == true ? data.iconCode?[index] : nil
+        self.iconCodeExtend = data.iconCodeExtend?.indices.contains(index) == true ? data.iconCodeExtend?[index] : nil
+        self.narrative = data.narrative?.indices.contains(index) == true ? data.narrative?[index] : nil
+        self.precipChance = data.precipChance?.indices.contains(index) == true ? data.precipChance?[index] : nil
+        self.precipType = data.precipType?.indices.contains(index) == true ? data.precipType?[index] : nil
+        self.qpf = data.qpf?.indices.contains(index) == true ? data.qpf?[index] : nil
+        self.qpfSnow = data.qpfSnow?.indices.contains(index) == true ? data.qpfSnow?[index] : nil
+        self.qualifierCode = data.qualifierCode?.indices.contains(index) == true ? data.qualifierCode?[index] : nil
+        self.qualifierPhrase = data.qualifierPhrase?.indices.contains(index) == true ? data.qualifierPhrase?[index] : nil
+        self.relativeHumidity = data.relativeHumidity?.indices.contains(index) == true ? data.relativeHumidity?[index] : nil
+        self.snowRange = data.snowRange?.indices.contains(index) == true ? data.snowRange?[index] : nil
+        self.temperature = data.temperature?.indices.contains(index) == true ? data.temperature?[index] : nil
+        self.temperatureHeatIndex = data.temperatureHeatIndex?.indices.contains(index) == true ? data.temperatureHeatIndex?[index] : nil
+        self.temperatureWindChill = data.temperatureWindChill?.indices.contains(index) == true ? data.temperatureWindChill?[index] : nil
+        self.thunderCategory = data.thunderCategory?.indices.contains(index) == true ? data.thunderCategory?[index] : nil
+        self.thunderIndex = data.thunderIndex?.indices.contains(index) == true ? data.thunderIndex?[index] : nil
+        self.uvDescription = data.uvDescription?.indices.contains(index) == true ? data.uvDescription?[index] : nil
+        self.uvIndex = data.uvIndex?.indices.contains(index) == true ? data.uvIndex?[index] : nil
+        self.windDirection = data.windDirection?.indices.contains(index) == true ? data.windDirection?[index] : nil
+        self.windDirectionCardinal = data.windDirectionCardinal?.indices.contains(index) == true ? data.windDirectionCardinal?[index] : nil
+        self.windPhrase = data.windPhrase?.indices.contains(index) == true ? data.windPhrase?[index] : nil
+        self.windSpeed = data.windSpeed?.indices.contains(index) == true ? data.windSpeed?[index] : nil
+        self.wxPhraseLong = data.wxPhraseLong?.indices.contains(index) == true ? data.wxPhraseLong?[index] : nil
+        self.wxPhraseShort = data.wxPhraseShort?.indices.contains(index) == true ? data.wxPhraseShort?[index] : nil
+    }
+}
 
-    enum CodingKeys: String, CodingKey {
-        case precipsAllowed = "precip_allowed"
-        case wxPhraseLong = "wx_phrase_long"
-        case wxPhraseShort = "wx_phrase_short"
-        case wxIcon = "wx_icon"
-        case iconCode = "icon_code"
-        case temperature = "temp" // Passt den Schlüssel an, falls API "temp" statt "temperature" verwendet
-        case humidity
-        case windSpeed = "wind_speed"
-        case windDir = "wind_dir"
-        case windDirCardinal = "wind_dir_cardinal"
-        case gust
-        case pop
-        case precipType = "precip_type"
-        case qpf
-        case snowQpf = "snow_qpf"
-        case uvIndex = "uv_index"
-        case uvDescription = "uv_description"
-        case cloudCover = "cloud_cover"
-        case pressureMeanSeaLevel = "pressure_mean_sea_level"
+// MARK: - DailyForecast (Aggregated for easy display)
+/// Repräsentiert die konsolidierte tägliche Vorhersage für einen einzelnen Tag.
+/// Diese Struktur wird aus DailyForecastAPIResponse und DaypartDataArrays zusammengestellt.
+struct DailyForecast: Identifiable {
+    let id = UUID()
+    
+    let date: Date // Das Datum des Vorhersagetags
+    let dayOfWeek: String // z.B. "Montag"
+    let maxTemp: Int // Höchsttemperatur
+    let minTemp: Int // Tiefsttemperatur
+    let narrative: String // Gesamtbeschreibung für den Tag
+    let qpf: Double // Niederschlagsmenge für den Tag
+
+    let dayPart: SingleDaypartForecast?
+    let nightPart: SingleDaypartForecast?
+
+    // Initialisierer, um eine DailyForecast aus den Rohdaten und einem Index zu erstellen
+    init?(index: Int, apiResponse: DailyForecastAPIResponse) {
+        guard let validTimeLocalStrings = apiResponse.validTimeLocal,
+              index < validTimeLocalStrings.count,
+              let dayOfWeeks = apiResponse.dayOfWeek,
+              index < dayOfWeeks.count,
+              let maxTemps = apiResponse.calendarDayTemperatureMax,
+              index < maxTemps.count,
+              let minTemps = apiResponse.calendarDayTemperatureMin,
+              index < minTemps.count,
+              let narratives = apiResponse.narrative,
+              index < narratives.count,
+              let qpfs = apiResponse.qpf,
+              index < qpfs.count
+        else {
+            return nil
+        }
+
+        let dateString = validTimeLocalStrings[index]
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ" // Passt zum ISO 8601 Format
+        guard let parsedDate = dateFormatter.date(from: dateString) else {
+            return nil
+        }
+
+        self.date = parsedDate
+        self.dayOfWeek = dayOfWeeks[index]
+        self.maxTemp = maxTemps[index] ?? 0
+        self.minTemp = minTemps[index] ?? 0
+        self.narrative = narratives[index]
+        self.qpf = qpfs[index] ?? 0.0
+
+        var foundDayPart: SingleDaypartForecast?
+        var foundNightPart: SingleDaypartForecast?
+
+        if let daypartData = apiResponse.daypart?.first { // Zugriff auf das DaypartDataArrays-Objekt
+            
+            // Konvertiere das DaypartDataArrays-Objekt in ein flaches Array von SingleDaypartForecast
+            var allSingleDayparts: [SingleDaypartForecast] = []
+            if let totalDayparts = daypartData.daypartName?.count { // Nutze irgendein Array zur Zählung
+                for i in 0..<totalDayparts {
+                    allSingleDayparts.append(SingleDaypartForecast(data: daypartData, index: i))
+                }
+            }
+            
+            // Versuche, den Tag und die Nacht für das aktuelle Datum zu finden
+            // Iteriere über die möglichen Dayparts, die dem aktuellen Datum entsprechen könnten.
+            // Die Logik hier ist, dass für Tag 'i' die Daypart-Einträge bei Index (i*2) und (i*2+1) liegen KÖNNTEN,
+            // aber es ist sicherer, nach dem `daypartName` UND dem `dayOrNight` zu suchen.
+
+            // Für den Index 'i' (von 0 bis 10 für die Tage) suchen wir nach dem passenden Daypart.
+            // Das daypart-Array in der JSON-Antwort ist flach.
+            // Der erste Eintrag ist "Heute Abend" (Nacht für Tag 0)
+            // Der zweite Eintrag ist "Morgen" (Tag für Tag 0)
+            // Der dritte Eintrag ist "Morgen Abend" (Nacht für Tag 1)
+            // Der vierte Eintrag ist "Sonntag" (Tag für Tag 1)
+            // ...
+            // Dies ist KEINE 1:1 Zuordnung mit dem Haupt-Index.
+            // Wir müssen die dayparts nach Datum und Tag/Nacht filtern.
+
+            // Am einfachsten ist es, alle dayparts zu iterieren und sie dem richtigen Datum zuzuordnen
+            // basierend auf dem 'daypartName' und dem 'dayOrNight' Flag.
+            
+            // Um die genaue Zuordnung zu gewährleisten, können wir den Wochentag aus parsedDate
+            // mit dem daypartName abgleichen.
+            let formatter = DateFormatter()
+            formatter.dateFormat = "EEEE" // "Freitag", "Samstag", etc.
+            formatter.locale = Locale(identifier: "de_DE")
+            let formattedDayOfWeek = formatter.string(from: parsedDate)
+            
+            for singleDaypart in allSingleDayparts {
+                if let name = singleDaypart.daypartName?.lowercased() {
+                    let dayNameLowercased = formattedDayOfWeek.lowercased()
+
+                    // Match für den aktuellen Tag
+                    // Sonderfall für "Heute Abend" / "Morgen" für den ersten Tag
+                    if index == 0 {
+                        if name.contains("heute abend") && singleDaypart.dayOrNight == "N" {
+                            foundNightPart = singleDaypart
+                        }
+                        if name.contains("morgen") && singleDaypart.dayOrNight == "D" {
+                            foundDayPart = singleDaypart
+                        }
+                    } else {
+                        // Für alle anderen Tage, die mit ihrem Wochentag benannt sind
+                        if name.contains(dayNameLowercased) {
+                            if singleDaypart.dayOrNight == "D" {
+                                foundDayPart = singleDaypart
+                            } else if singleDaypart.dayOrNight == "N" {
+                                foundNightPart = singleDaypart
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        self.dayPart = foundDayPart
+        self.nightPart = foundNightPart
+    }
+
+    // Formatierte Datumsausgabe
+    var formattedDateString: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE, dd. MMMM" // z.B. "Mittwoch, 18. Juni"
+        formatter.locale = Locale(identifier: "de_DE")
+        return formatter.string(from: date)
     }
 }

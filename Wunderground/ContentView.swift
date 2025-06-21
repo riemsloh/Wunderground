@@ -110,6 +110,8 @@ struct ContentView: View {
                                     .padding(.bottom)
                             }
                         }
+                        
+                        DailyForecastView()
                     }
                 }
                 .padding(.bottom)
@@ -754,15 +756,15 @@ struct HistoricalDataCard: View {
         )
         // Debug outputs moved to onAppear
         .onAppear {
-            print("--- HistoricalDataCard Debug ---")
+        /*    print("--- HistoricalDataCard Debug ---")
             print("obsTimeLocal: \(observation.obsTimeLocal ?? "nil")")
             print("tempAvg (from metric): \(observation.metric?.windspeedAvg ?? 100)")
-           /* print("tempHigh (from metric): \(observation.metric?.tempHigh.map(String.init) ?? "nil")")
+            print("tempHigh (from metric): \(observation.metric?.tempHigh.map(String.init) ?? "nil")")
             print("tempLow (from metric): \(observation.metric?.tempLow.map(String.init) ?? "nil")")
             print("precipTotal (from metric): \(observation.metric?.precipTotal.map(String.init) ?? "nil")")
             print("windspeedAvg (from metric): \(observation.metric?.windspeedAvg.map(String.init) ?? "nil")")
             print("humidityAvg (top-level): \(observation.humidityAvg.map(String.init) ?? "nil")")*/
-            print("------------------------------")
+          //  print("------------------------------")
         }
     }
 }

@@ -1,9 +1,13 @@
 //
 //  DailyForecastViewModel.swift
-
+//  DeineApp
+//
+//  Created by [Dein Name] on [Aktuelles Datum].
+//  Copyright © [Aktuelles Jahr] [Dein Unternehmen]. All rights reserved.
+//
 
 import Foundation
-import SwiftUI // Für ObservableObject, @Published, @MainActor, @AppStorage
+import SwiftUI // For ObservableObject, @Published, @MainActor, @AppStorage
 
 
 class DailyForecastViewModel: ObservableObject {
@@ -11,113 +15,140 @@ class DailyForecastViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
 
-    // Lese die Konfigurationswerte direkt aus AppStorage
-    @AppStorage("apiKey") private var storedApiKey: String = "YOUR_WEATHER_API_KEY"
-    @AppStorage("latitude") private var storedLatitude: Double = 52.2039 // Beispiel: Melle Latitude
-    @AppStorage("longitude") private var storedLongitude: Double = 8.3374 // Beispiel: Melle Longitude
-    @AppStorage("autoRefreshEnabled") var autoRefreshEnabled: Bool = true // Muss hier auch gelesen werden
+    // Read configuration values directly from AppStorage
+    @AppStorage("hourlyApiKey") private var storedApiKey: String = "YOUR_WEATHER_API_KEY"
+    @AppStorage("latitude") private var storedLatitude: Double = 52.2039 // Example: Melle Latitude
+    @AppStorage("longitude") private var storedLongitude: Double = 8.3374 // Example: Melle Longitude
+    @AppStorage("autoRefreshEnabled") var autoRefreshEnabled: Bool = true // Must also be read here
 
     private var timer: Timer?
-    // Basis-URL für die tägliche Vorhersage-API
-    private let dailyForecastBaseURL = "https://api.weather.com/v1/forecast/daily/10day" // Beispiel für 10-Tages-Vorhersage
+    private let dailyForecastBaseURL = "https://api.weather.com/v3/wx/forecast/daily/10day" // Example
 
     init() {
-        // Der erste Abruf wird in der onAppear-Methode der View gestartet,
-        // um sicherzustellen, dass die AppStorage-Werte geladen sind.
+        // The first fetch is started in the onAppear method of the View,
+        // to ensure that the AppStorage values are loaded.
     }
 
-    /// Ruft die tägliche Vorhersage ab.
+    /// Fetches the daily forecast.
     @MainActor
     func fetchDailyForecast(units: String = "m") async {
-        guard autoRefreshEnabled else { return } // Nur abrufen, wenn Auto-Refresh aktiviert ist
+        guard autoRefreshEnabled else { return } // Only fetch if auto-refresh is enabled
 
         isLoading = true
         errorMessage = nil
 
-        // Überprüfen, ob API-Schlüssel und Koordinaten vorhanden sind
+        // Check if API key and coordinates are available
         guard !storedApiKey.isEmpty, storedApiKey != "YOUR_WEATHER_API_KEY",
               storedLatitude != 0.0, storedLongitude != 0.0 else {
-            errorMessage = "Warnung: API-Schlüssel oder Koordinaten fehlen für tägliche Vorhersage. Bitte in den Einstellungen prüfen."
+            errorMessage = "Warning: API key or coordinates missing for daily forecast. Please check in settings."
             dailyForecasts = []
             isLoading = false
             return
         }
 
-        // URL-Komponenten erstellen
+        // Create URL components
         var components = URLComponents(string: dailyForecastBaseURL)
         components?.queryItems = [
-            URLQueryItem(name: "geocode", value: "\(storedLatitude),\(storedLongitude)"), // Geokoordinaten
+            URLQueryItem(name: "geocode", value: "\(storedLatitude),\(storedLongitude)"), // Geocoordinates
             URLQueryItem(name: "format", value: "json"),
             URLQueryItem(name: "units", value: units),
-            URLQueryItem(name: "language", value: "de-DE"), // Sprache auf Deutsch setzen
+            URLQueryItem(name: "language", value: "de-DE"), // Set language to German
             URLQueryItem(name: "apiKey", value: storedApiKey)
         ]
 
         guard let url = components?.url else {
-            errorMessage = "Ungültige URL-Konfiguration für tägliche Vorhersage."
+            errorMessage = "Invalid URL configuration for daily forecast."
             dailyForecasts = []
             isLoading = false
             return
         }
 
-        print("Versuche, tägliche Vorhersage abzurufen von URL: \(url.absoluteString)")
+        print("Attempting to fetch daily forecast from URL: \(url.absoluteString)")
 
         do {
             let (data, response) = try await URLSession.shared.data(from: url)
 
             if let httpResponse = response as? HTTPURLResponse {
-                print("HTTP Status Code für tägliche Vorhersage: \(httpResponse.statusCode)")
+                print("HTTP Status Code for daily forecast: \(httpResponse.statusCode)")
                 guard (200...299).contains(httpResponse.statusCode) else {
-                    errorMessage = "Serverfehler beim Abruf täglicher Vorhersage. Statuscode: \(httpResponse.statusCode)"
+                    let receivedDataString = String(data: data, encoding: .utf8) ?? "No readable data."
+                    errorMessage = "Server error fetching daily forecast. Status code: \(httpResponse.statusCode). Response: \(receivedDataString)"
                     dailyForecasts = []
-                    print("Fehlerhafte rohe Antwort für tägliche Vorhersage: \(String(data: data, encoding: .utf8) ?? "Keine Daten")")
                     isLoading = false
                     return
                 }
             }
 
-            print("Rohe JSON-Antwort für tägliche Vorhersage: \(String(data: data, encoding: .utf8) ?? "Ungültige Daten")")
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("--- Raw JSON response for daily forecast ---")
+                debugPrint(jsonString)
+                print("--------------------------------------------------")
+            } else {
+                print("Error: Could not decode JSON data as String.")
+            }
 
             let decoder = JSONDecoder()
-            let dailyResponse = try decoder.decode(DailyForecastResponse.self, from: data)
-            dailyForecasts = dailyResponse.forecasts ?? []
+            // Here we decode the raw data structure
+            let apiResponse = try decoder.decode(DailyForecastAPIResponse.self, from: data)
+            
+            var newForecasts: [DailyForecast] = []
+            // Ensure that the daypart array exists and is not empty
+            if let validTimes = apiResponse.validTimeLocal {
+                for i in 0..<validTimes.count {
+                    if let forecast = DailyForecast(index: i, apiResponse: apiResponse) {
+                        newForecasts.append(forecast)
+                    }
+                }
+            }
+            self.dailyForecasts = newForecasts
 
             if dailyForecasts.isEmpty {
-                errorMessage = "Keine täglichen Vorhersagedaten gefunden."
+                errorMessage = "No daily forecast data found."
             } else {
-                print("Tägliche Vorhersage erfolgreich geladen! Anzahl Beobachtungen: \(dailyForecasts.count)")
+                print("Daily forecast successfully loaded! Number of observations: \(dailyForecasts.count)")
             }
 
         } catch let decodingError as DecodingError {
-            print("Decodierungsfehler für tägliche Vorhersage: \(decodingError.localizedDescription)")
-            errorMessage = "Fehler beim Decodieren der täglichen Vorhersagedaten."
+            print("Decoding error for daily forecast: \(decodingError.localizedDescription)")
+            switch decodingError {
+            case .typeMismatch(let type, let context):
+                errorMessage = "Type mismatch for \(type) in context: \(context.codingPath.map { $0.stringValue }.joined(separator: ".")) - \(context.debugDescription)"
+            case .valueNotFound(let type, let context):
+                errorMessage = "Value not found for \(type) in context: \(context.codingPath.map { $0.stringValue }.joined(separator: ".")) - \(context.debugDescription)"
+            case .keyNotFound(let key, let context):
+                errorMessage = "Key '\(key.stringValue)' not found in context: \(context.codingPath.map { $0.stringValue }.joined(separator: ".")) - \(context.debugDescription)"
+            case .dataCorrupted(let context):
+                errorMessage = "Data corrupted in context: \(context.codingPath.map { $0.stringValue }.joined(separator: ".")) - \(context.debugDescription)"
+            @unknown default:
+                errorMessage = "Unknown decoding error: \(decodingError.localizedDescription)"
+            }
             dailyForecasts = []
         } catch {
-            print("Fehler beim Abrufen täglicher Vorhersage: \(error.localizedDescription)")
-            errorMessage = "Fehler beim Abrufen der täglichen Vorhersagedaten: \(error.localizedDescription)"
+            print("Error fetching daily forecast: \(error.localizedDescription)")
+            errorMessage = "Error fetching daily forecast data: \(error.localizedDescription)"
             dailyForecasts = []
         }
         isLoading = false
     }
 
-    /// Startet einen Timer, der alle 5 Minuten die tägliche Vorhersage abruft.
+    /// Starts a timer that fetches the daily forecast every 5 minutes.
     func startFetchingDataAutomatically() {
-        timer?.invalidate() // Vorhandenen Timer ungültig machen
+        timer?.invalidate() // Invalidate existing timer
 
-        guard autoRefreshEnabled else { return } // Nur starten, wenn Auto-Refresh aktiviert ist
+        guard autoRefreshEnabled else { return } // Only start if auto-refresh is enabled
 
         timer = Timer.scheduledTimer(withTimeInterval: 60.0 * 5, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 await self?.fetchDailyForecast()
             }
         }
-        // Erster Abruf sofort
+        // First fetch immediately
         Task { @MainActor in
             await self.fetchDailyForecast()
         }
     }
 
-    /// Stoppt den automatischen Datenabruf-Timer.
+    /// Stops the automatic data fetching timer.
     func stopFetchingDataAutomatically() {
         timer?.invalidate()
         timer = nil
