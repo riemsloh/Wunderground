@@ -183,7 +183,7 @@ struct DailyForecast: Identifiable {
         self.maxTemp = maxTemps[index] ?? 0
         self.minTemp = minTemps[index] ?? 0
         self.narrative = narratives[index]
-        self.qpf = qpfs[index] ?? 0.0
+        self.qpf = qpfs[index] 
 
         var foundDayPart: SingleDaypartForecast?
         var foundNightPart: SingleDaypartForecast?
