@@ -138,9 +138,16 @@ class DailyForecastViewModel: ObservableObject {
         guard autoRefreshEnabled else { return } // Only start if auto-refresh is enabled
 
         timer = Timer.scheduledTimer(withTimeInterval: 60.0 * 5, repeats: true) { [weak self] _ in
+#if swift(>=6.0)
             Task { @MainActor in
                 await self?.fetchDailyForecast()
             }
+            #else
+            Task {
+                await self?.fetchDailyForecast()
+                
+            }
+            #endif
         }
         // First fetch immediately
         Task { @MainActor in
