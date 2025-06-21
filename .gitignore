@@ -1,0 +1,91 @@
+
+# Xcode
+.DS_Store
+*.xcodeproj/
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+*.xcworkspace/
+!*.xcworkspace/xcshareddata/
+*.playground/
+*.playgroundbook/
+*.xccheckout/
+*.xcassets/
+!*.xcassets/**/*.imageset/Contents.json
+!*.xcassets/**/*.launchimage/Contents.json
+!*.xcassets/**/*.appiconset/Contents.json
+
+# Build-Artefakte
+build/
+*.xcarchive/
+*.ipa
+*.dSYM.zip
+*.app/
+*.framework/
+*.xcframework/
+*.o
+*.lo
+*.la
+*.dylib
+*.a
+*.so
+*.appex/
+*.bundle/
+*.xctest/
+*.dmg
+*.pkg
+*.zip
+*.tar
+*.gz
+
+# Swift-spezifische Dateien
+.swiftpm/
+.build/
+Package.resolved
+DerivedData/
+
+# Abhängigkeitsmanager (falls verwendet)
+# CocoaPods
+Pods/
+Podfile.lock
+
+# Carthage
+Carthage/
+*.xcframeworks/
+
+# Swift Package Manager (bereits oben abgedeckt, aber zur Klarheit)
+# .build/
+# Package.resolved
+
+# Andere temporäre oder benutzerspezifische Dateien
+# Diese können je nach Entwicklungsumgebung variieren
+.vscode/ # Für VS Code Benutzer
+.idea/   # Für AppCode/IntelliJ Benutzer
+*.bak
+*.tmp
+*.log
+*.swp
+*.swo
+*.orig
+*.rej
+*.diff
+
+# User-spezifische Xcode-Dateien
+xcuserdata/
+*.xcuserdatad/
+*.xcuserstate
+*.mode1v3
+*.perspectivev3
+*.waf
+*.xccheckout
+*.xcscmblueprint
+*.xctestplan
+*.xcscheme
+
+# Crash-Logs
+*.crash
+
+# Lokale Umgebungsvariablen (falls verwendet)
+.env
+.env.*
+.local
+.DS_Store
