@@ -102,7 +102,9 @@ struct SettingsView: View {
                     .foregroundColor(.gray)
             }
         }
-        .formStyle(.grouped) // Gruppierter Stil für macOS-Einstellungen
+     //   if #available(iOS 16.0, *) {
+         //   .formStyle(.grouped) // Gruppierter Stil für macOS-Einstellungen
+     //   }
         .padding()
         .frame(minWidth: 350, minHeight: 300) // Mindestgröße für das Einstellungsfenster
         .navigationTitle("Einstellungen") // Titel für das Fenster
