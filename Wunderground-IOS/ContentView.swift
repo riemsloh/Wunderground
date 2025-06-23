@@ -7,6 +7,13 @@
 
 import SwiftUI
 
+
+let smallCardWidth: CGFloat = 150
+let smallCardHeight: CGFloat = 150
+let bigCardWidth: CGFloat = 315
+let bigCardheight: CGFloat = 150
+
+
 struct ContentView: View {
     @StateObject var pwsViewModel = PWSViewModel()
     @State private var showingSettingsSheet = false
@@ -16,11 +23,20 @@ struct ContentView: View {
                 .edgesIgnoringSafeArea(.all)
             ScrollView{
                 VStack{
+                    MainCard(pwsViewModel: pwsViewModel)
+                    
+                    /*
                     if let obs = pwsViewModel.observation, let metric = obs.metric {
                         PWSInfoCard(pwsViewModel: pwsViewModel)
                     }
+                     */
                 }
                 .padding(.top)
+                HStack{
+                 //   DummyCard()
+                    PrecipitationCard(pwsViewModel: pwsViewModel)
+                }
+                
             }
         }
         .padding()
@@ -52,6 +68,71 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
+}
+
+// MARK: - Die Hauptkarte Für Staion Name und Temperatur. Ohne Rahmen
+struct MainCard: View {
+    @ObservedObject var pwsViewModel: PWSViewModel  // PWS Model
+    var body: some View {
+        VStack{
+            HStack{
+                Text("\(pwsViewModel.observation?.neighborhood ?? "N/A")")  //Stations Name
+                    .font(.largeTitle)
+            }
+            .padding(.vertical, 4.0)
+            HStack{
+                Text(pwsViewModel.observation?.metric?.temp.map { String(format: "%0.f°C", $0) } ?? "N/A") // Die Aktuelle Temperatur
+                    .font(.largeTitle)
+            }
+            .padding(.bottom)
+        }
+        .foregroundColor(.white)
+    }
+}
+
+// MARK - Die Niederschlags Karte
+// Anzeigen der Regen Mengen von Heute, Gestern und diese Woche
+struct PrecipitationCard: View {
+    @ObservedObject var pwsViewModel: PWSViewModel
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: "umbrella")
+                    .foregroundColor(.white.opacity(0.7))
+                Text("Niederschlag")
+                    .font(.footnote)
+                    .foregroundColor(.white)
+                Spacer()
+            }
+            Divider()
+            VStack{
+                HStack{
+                    Text("Regen heute")
+                    Spacer()
+                    Text(pwsViewModel.observation?.metric?.precipTotal.map { String(format: "%0.f Liter", $0)} ?? "N/A")
+                }
+                Divider()
+                HStack{
+                    Text("Regen gestern")
+                    Spacer()
+                    Text(pwsViewModel.lastDayPrecipitation.map { String(format: "%0.f Liter", $0)} ?? "N/A")
+                }
+                Divider()
+                HStack{
+                    Text("Regen woche")
+                    Spacer()
+                    Text(pwsViewModel.currentWeekPrecipitation.map { String(format: "%0.f Liter", $0)} ?? "N/A")
+                }
+            }
+            .font(.footnote)
+            Spacer()
+        }
+      .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(width: bigCardWidth, height: bigCardheight) // Fixed height for a consistent grid
+        .cardBackground()
+
+    }
 }
 // MARK: - PWSInfoCard
 struct PWSInfoCard: View {
@@ -102,6 +183,21 @@ struct PWSInfoCard: View {
             }
             .padding([.bottom, .horizontal]) // Padding only bottom and horizontal for this VStack
         }
+        .background(Color.white.opacity(0.1))
+        .cornerRadius(15)
+        .overlay(
+            RoundedRectangle(cornerRadius: 15)
+                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+        )
+    }
+}
+
+struct DummyCard: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(width: 150, height: 150) // Fixed height for a consistent grid
         .background(Color.white.opacity(0.1))
         .cornerRadius(15)
         .overlay(
