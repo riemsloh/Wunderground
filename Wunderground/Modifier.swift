@@ -8,7 +8,7 @@
 import SwiftUI
 
 // MARK: - CardBackgroundModifier
-/// Ein benutzerdefinierter ViewModifier, um einen konsistenten Hintergrund- und Randstil f\u00FCr Karten zu definieren.
+/// Ein benutzerdefinierter ViewModifier, um einen konsistenten Hintergrund- und Randstil für Karten zu definieren.
 struct CardBackgroundModifier: ViewModifier {
     // Der body(content:) der ViewModifier-Methode empf\u00E4ngt die View,
     // auf die der Modifikator angewendet wird (hier als 'content' bezeichnet).
@@ -21,12 +21,12 @@ struct CardBackgroundModifier: ViewModifier {
                 RoundedRectangle(cornerRadius: 15)
                     .stroke(Color.white.opacity(0.2), lineWidth: 1)
             )
-            .shadow(radius: 5) // F\u00FCgen Sie hier optional einen Schatten hinzu
+            .shadow(radius: 5) 
     }
 }
 
 // MARK: - View Extension
-/// Eine Erweiterung auf View, um den ViewModifier einfacher anwenden zu k\u00F6nnen.
+/// Eine Erweiterung auf View, um den ViewModifier einfacher anwenden zu können.
 extension View {
     func cardBackground() -> some View {
         self.modifier(CardBackgroundModifier())

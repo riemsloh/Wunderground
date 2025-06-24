@@ -847,3 +847,23 @@ struct CompassLabels: View {
     }
 }
 
+// Hilfsfunktion zur Umwandlung von iconCode in SF Symbols Namen (Wetter-Icons)
+ func iconNameForCode(_ code: Int?, isNight: Bool = false) -> String {
+     guard let code = code else { return "questionmark.circle" }
+     switch code {
+     case 1...4: return isNight ? "moon.stars.fill" : "sun.max.fill" // Sunny, Mostly Sunny
+     case 5...8: return isNight ? "cloud.moon.fill" : "cloud.sun.fill" // Partly Cloudy, Scattered Clouds
+     case 9...10: return "cloud.fill" // Cloudy, Overcast
+     case 11...12: return "cloud.drizzle.fill" // Showers
+     case 13...14: return "cloud.rain.fill" // Rain
+     case 15...16: return "cloud.bolt.rain.fill" // Thunderstorms
+     case 17...18: return "cloud.heavyrain.fill" // Heavy Rain
+     case 19...22: return "cloud.snow.fill" // Snow
+     case 23...26: return "cloud.fog.fill" // Fog, Mist
+     case 27...28: return "wind" // Windy
+     case 29...30: return "tornado" // Tornado
+     case 31...32: return isNight ? "moon.fill" : "thermometer.sun.fill" // Hot (Placeholder for night)
+     case 33...34: return "thermometer.snowflake" // Cold
+     default: return "questionmark.circle"
+     }
+ }

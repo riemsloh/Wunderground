@@ -81,7 +81,7 @@ class DailyForecastViewModel: ObservableObject {
 
             if let jsonString = String(data: data, encoding: .utf8) {
                 print("--- Raw JSON response for daily forecast ---")
-                debugPrint(jsonString)
+               // debugPrint(jsonString)
                 print("--------------------------------------------------")
             } else {
                 print("Error: Could not decode JSON data as String.")

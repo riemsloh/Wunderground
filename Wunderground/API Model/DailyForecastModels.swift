@@ -148,6 +148,9 @@ struct DailyForecast: Identifiable {
     let minTemp: Int // Tiefsttemperatur
     let narrative: String // Gesamtbeschreibung für den Tag
     let qpf: Double // Niederschlagsmenge für den Tag
+    let moonPhase: String // Text der Mond Phase
+    let moonPhaseCode: String // Mond Pharse Code
+    let moonriseTimeLocal: String // Mondaufgang
 
     let dayPart: SingleDaypartForecast?
     let nightPart: SingleDaypartForecast?
@@ -165,7 +168,13 @@ struct DailyForecast: Identifiable {
               let narratives = apiResponse.narrative,
               index < narratives.count,
               let qpfs = apiResponse.qpf,
-              index < qpfs.count
+              index < qpfs.count,
+              let moonPhase = apiResponse.moonPhase,
+              index < moonPhase.count,
+              let moonPhaseCode = apiResponse.moonPhaseCode,
+              index < moonPhaseCode.count,
+              let moonriseTimeLocal = apiResponse.moonriseTimeLocal,
+              index < moonriseTimeLocal.count
         else {
             return nil
         }
@@ -177,13 +186,32 @@ struct DailyForecast: Identifiable {
         guard let parsedDate = dateFormatter.date(from: dateString) else {
             return nil
         }
+        
+        // NEU: Formatierte Mondaufgangszeit als String
+        var formattedMoonriseTime: String {
+            guard let timeString = moonriseTimeLocal[index], !timeString.isEmpty else { return "N/A" }
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ" // Originalformat
+            if let date = formatter.date(from: timeString) {
+                formatter.dateFormat = "HH:mm" // Gewünschtes Ausgabeformat (z.B. "01:45")
+                formatter.locale = Locale(identifier: "de_DE") // Für deutsches Zeitformat
+                return formatter.string(from: date)
+            }
+            return "N/A"
+        }
+
 
         self.date = parsedDate
         self.dayOfWeek = dayOfWeeks[index]
         self.maxTemp = maxTemps[index] ?? 0
         self.minTemp = minTemps[index] ?? 0
         self.narrative = narratives[index]
-        self.qpf = qpfs[index] 
+        self.qpf = qpfs[index]
+        self.moonPhase = moonPhase[index]
+        self.moonPhaseCode = moonPhaseCode[index]
+        dateFormatter.dateFormat = "HH:mm:ssZ" // Passt zum ISO 8601 Format
+        self.moonriseTimeLocal = formattedMoonriseTime
+        print("Nächster Mondausgang \(self.moonriseTimeLocal)")
 
         var foundDayPart: SingleDaypartForecast?
         var foundNightPart: SingleDaypartForecast?
