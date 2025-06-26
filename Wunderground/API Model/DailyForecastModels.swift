@@ -151,6 +151,7 @@ struct DailyForecast: Identifiable {
     let moonPhase: String // Text der Mond Phase
     let moonPhaseCode: String // Mond Pharse Code
     let moonriseTimeLocal: String // Mondaufgang
+    let moonsetTimeLocal: String // Monduntergang
 
     let dayPart: SingleDaypartForecast?
     let nightPart: SingleDaypartForecast?
@@ -174,7 +175,9 @@ struct DailyForecast: Identifiable {
               let moonPhaseCode = apiResponse.moonPhaseCode,
               index < moonPhaseCode.count,
               let moonriseTimeLocal = apiResponse.moonriseTimeLocal,
-              index < moonriseTimeLocal.count
+              index < moonriseTimeLocal.count,
+              let moonsetTimeLocal = apiResponse.moonsetTimeLocal,
+              index < moonsetTimeLocal.count
         else {
             return nil
         }
@@ -199,7 +202,17 @@ struct DailyForecast: Identifiable {
             }
             return "N/A"
         }
-
+        var formattedMoonsetTime: String {
+            guard let timeString = moonsetTimeLocal[index], !timeString.isEmpty else { return "N/A" }
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ" // Originalformat
+            if let date = formatter.date(from: timeString) {
+                formatter.dateFormat = "HH:mm" // Gewünschtes Ausgabeformat (z.B. "01:45")
+                formatter.locale = Locale(identifier: "de_DE") // Für deutsches Zeitformat
+                return formatter.string(from: date)
+            }
+            return "N/A"
+        }
 
         self.date = parsedDate
         self.dayOfWeek = dayOfWeeks[index]
@@ -209,9 +222,15 @@ struct DailyForecast: Identifiable {
         self.qpf = qpfs[index]
         self.moonPhase = moonPhase[index]
         self.moonPhaseCode = moonPhaseCode[index]
-        dateFormatter.dateFormat = "HH:mm:ssZ" // Passt zum ISO 8601 Format
+       // dateFormatter.dateFormat = "HH:mm:ssZ" // Passt zum ISO 8601 Format
         self.moonriseTimeLocal = formattedMoonriseTime
-        print("Nächster Mondausgang \(self.moonriseTimeLocal)")
+        self.moonsetTimeLocal = formattedMoonsetTime
+        // Debug der Astro Werte
+        print("Astro Werte für \(parsedDate)")
+        print("Mond Phase \(self.moonPhase)")
+        print("Mondaufgang \(self.moonriseTimeLocal)")
+        print("Monduntergang \(self.moonsetTimeLocal)")
+        print("-------------")
 
         var foundDayPart: SingleDaypartForecast?
         var foundNightPart: SingleDaypartForecast?

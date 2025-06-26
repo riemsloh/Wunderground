@@ -134,7 +134,6 @@ struct DailyForecastCard: View {
 
     // Hilfsfunktion zur Umwandlung von iconCode in SF Symbols Namen
     func iconNameForCode(_ code: Int?, isNight: Bool = false) -> String {
-        print( code)
         guard let code = code else { return "questionmark.circle" }
         switch code {
         case 1...4: return isNight ? "moon.stars.fill" : "sun.max.fill" // Sunny, Mostly Sunny

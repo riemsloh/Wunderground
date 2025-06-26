@@ -2,12 +2,16 @@ import SwiftUI
 import CoreLocation // For CLLocationDirection
 import MapKit
 
-
+let smallCardWidth: CGFloat = 150
+let smallCardHeight: CGFloat = 150
+let bigCardWidth: CGFloat = 315
+let bigCardheight: CGFloat = 150
 // MARK: -
 // Small tile 150*150
 // Large tile 300*150 + padding
 struct ContentView: View {
     @StateObject var pwsViewModel = PWSViewModel()
+    @StateObject var dailyForecastViewModel = DailyForecastViewModel()
     @State private var selectedHistoricalDate: Date = Date() // For selecting the historical date
 
     var body: some View {
@@ -29,6 +33,7 @@ struct ContentView: View {
                             VStack(spacing: 15){
                                 HStack(spacing: 15){
                                     WindCard(windSpeed: metricData.windSpeed ?? Double(Int(0.0)), windGust: metricData.windGust ?? Double(Int(0.0)), windDirection: Double(obs.winddir ?? Int(0.0)))
+                                       
                                     NiederschlagsCard(rainToday: metricData.precipTotal ?? 0.0, rainYesterday: pwsViewModel.lastDayPrecipitation ?? 0.0, rainWeek: pwsViewModel.currentWeekPrecipitation ?? 0.0)
                                 }
                                 HStack(spacing: 15){
@@ -36,6 +41,7 @@ struct ContentView: View {
                                     LuftdruckCard(title: "Luftdruck", value: metricData.pressure.map { String(format: "%.0f", $0) } ?? "N/A", iconName: "barometer")
                                     RegenHeuteCard(title: "Regen heute", value: metricData.precipTotal.map { String(format: "%.1f", $0) } ?? "N/A", iconName: "umbrella")
                                     KompassCard(title: "Wind", value: metricData.windSpeed.map {String(format: "%.0f", $0)} ?? "N/A", iconName: "wind")
+                                    MoonCard(dailyForecastViewModel: dailyForecastViewModel, cardWidth: bigCardWidth, cardHeight: bigCardheight)
                                 }
                             }
                             .frame(maxWidth: .infinity)
@@ -111,7 +117,7 @@ struct ContentView: View {
                             }
                         }
                         
-                        DailyForecastView()
+                      //  DailyForecastView()
                     }
                 }
                 .padding(.bottom)
@@ -120,17 +126,20 @@ struct ContentView: View {
         // IMPORTANT: Start data fetching and timer as soon as this View appears.
         .onAppear {
             pwsViewModel.startFetchingDataAutomatically()
+            dailyForecastViewModel.startFetchingDataAutomatically()
             // Load historical data for today's date on first appearance
             let formatter = DateFormatter()
             formatter.dateFormat = "yyyyMMdd"
             let dateString = formatter.string(from: selectedHistoricalDate)
             Task {
                 await pwsViewModel.fetchHistoricalWeatherData(date: dateString)
+                await dailyForecastViewModel.fetchDailyForecast()
             }
         }
         .onDisappear {
             // Stop the timer when the menu bar popover is closed.
             pwsViewModel.stopFetchingDataAutomatically()
+            dailyForecastViewModel.stopFetchingDataAutomatically()
         }
     }
 }
@@ -195,10 +204,7 @@ struct PWSInfoCard: View {
     }
 }
 
-let smallCardWidth: CGFloat = 150
-let smallCardHeight: CGFloat = 150
-let bigCardWidth: CGFloat = 315
-let bigCardheight: CGFloat = 150
+
 // MARK: - The Info Card
 struct TemperaturCard: View {
     let title: String
